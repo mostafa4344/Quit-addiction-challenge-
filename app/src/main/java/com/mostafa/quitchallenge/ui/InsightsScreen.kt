@@ -24,7 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mostafa.quitchallenge.data.AppData
-import com.mostafa.quitchallenge.data.bn
 import com.mostafa.quitchallenge.data.computeInsights
 import com.mostafa.quitchallenge.data.formatDuration
 
@@ -33,7 +32,7 @@ fun InsightsScreen(data: AppData) {
     val now = rememberNow(60_000L)
     val insights = computeInsights(data, now)
 
-    Scaffold(topBar = { TopAppBar(title = { Text("প্রেশার বিশ্লেষণ 📊") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("Pressure insights 📊") }) }) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
@@ -43,13 +42,14 @@ fun InsightsScreen(data: AppData) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatBox("সম্পূর্ণ চ্যালেঞ্জ", insights.completions.bn(), Modifier.weight(1f))
-                StatBox("ফেইল", insights.failures.bn(), Modifier.weight(1f))
-                StatBox("সফলতার হার", "${insights.successRate.bn()}%", Modifier.weight(1f))
+                StatBox("Completed", "${insights.completions}", Modifier.weight(1f))
+                StatBox("Failed", "${insights.failures}", Modifier.weight(1f))
+                StatBox("Success rate", "${insights.successRate}%", Modifier.weight(1f))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatBox("সামলানো ইচ্ছা", insights.urgesHandled.bn(), Modifier.weight(1f))
-                StatBox("মোট আসক্তিমুক্ত সময়", formatDuration(insights.totalCleanMs), Modifier.weight(2f))
+                StatBox("Urges beaten", "${insights.urgesHandled}", Modifier.weight(1f))
+                StatBox("Keyword alerts", "${insights.keywordAlerts}", Modifier.weight(1f))
+                StatBox("Total clean time", formatDuration(insights.totalCleanMs), Modifier.weight(1f))
             }
 
             if (!insights.hasData) {
@@ -61,8 +61,8 @@ fun InsightsScreen(data: AppData) {
                 ) {
                     Text("🔍", style = MaterialTheme.typography.displayMedium)
                     Text(
-                        "যখনই ইচ্ছা হবে বা ফেইল করবেন, কোন প্রেশার থেকে হলো সেটা লগ করুন। " +
-                            "তাহলে এখানে দেখা যাবে কোন প্রেশার আপনাকে সবচেয়ে বেশি টানে আর কখন — সেই অনুযায়ী প্ল্যান বানানো যাবে।",
+                        "Whenever you feel an urge or slip, log which pressure caused it. " +
+                            "This screen will then show which pressures pull you the most and when, so you can plan ahead.",
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -70,35 +70,35 @@ fun InsightsScreen(data: AppData) {
             }
 
             if (insights.triggerCounts.isNotEmpty()) {
-                SectionTitle("🎯 কোন প্রেশার সবচেয়ে বেশি টানে")
+                SectionTitle("🎯 Pressures that pull you the most")
                 val max = insights.triggerCounts.first().second
                 insights.triggerCounts.forEach { (t, n) ->
-                    BarRow("${t.emoji} ${t.label}", n, max, MaterialTheme.colorScheme.secondary)
+                    BarRow("${t.emoji} ${t.label}", "$n×", n / max.toFloat(), MaterialTheme.colorScheme.secondary)
                 }
             }
 
-            SectionTitle("🕒 কোন সময়ে ঝুঁকি বেশি")
+            SectionTitle("🕒 When you're most at risk")
             val maxPart = insights.dayPartCounts.maxOf { it.second }
             insights.dayPartCounts.forEach { (part, n) ->
-                BarRow(part.label, n, maxPart, MaterialTheme.colorScheme.primary)
+                BarRow(part.label, "$n×", if (maxPart == 0) 0f else n / maxPart.toFloat(), MaterialTheme.colorScheme.primary)
             }
             insights.dayPartCounts.maxByOrNull { it.second }?.takeIf { it.second > 0 }?.let { (part, _) ->
                 Text(
-                    "⚠️ আপনার সবচেয়ে ঝুঁকির সময়: ${part.label}। এই সময়ে আগে থেকেই অন্য কাজ ঠিক করে রাখুন।",
+                    "⚠️ Your riskiest time: ${part.label}. Plan something else to do at this time in advance.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
 
             val top = insights.triggerCounts.take(3)
             if (top.isNotEmpty()) {
-                SectionTitle("📝 আপনার প্ল্যান")
+                SectionTitle("📝 Your plan")
                 top.forEach { (t, _) ->
                     Card(
                         Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                     ) {
                         Column(Modifier.padding(16.dp)) {
-                            Text("${t.emoji} যখন ${t.label} হবে", fontWeight = FontWeight.Bold)
+                            Text("${t.emoji} When you feel ${t.label.lowercase()}", fontWeight = FontWeight.Bold)
                             Text(t.tip, Modifier.padding(top = 4.dp))
                         }
                     }

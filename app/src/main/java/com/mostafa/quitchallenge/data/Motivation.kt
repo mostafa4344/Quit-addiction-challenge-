@@ -3,22 +3,22 @@ package com.mostafa.quitchallenge.data
 import java.time.LocalDate
 
 private val QUOTES = listOf(
-    "প্রতিটা বড় পরিবর্তন শুরু হয় ছোট একটা 'না' দিয়ে।",
-    "আপনি আপনার অভ্যাসের চেয়ে শক্তিশালী।",
-    "ইচ্ছাটা ঢেউয়ের মতো — আসে, চূড়ায় ওঠে, তারপর চলে যায়। শুধু ১৫ মিনিট টিকে থাকুন।",
-    "পড়ে যাওয়া ব্যর্থতা না, উঠে না দাঁড়ানোটাই ব্যর্থতা।",
-    "আজকের কষ্টই কালকের শক্তি।",
-    "নিজেকে প্রমাণ করতে আজকের দিনটা জিতলেই যথেষ্ট।",
-    "ডিসিপ্লিন মানে নিজের সবচেয়ে বড় চাওয়াটা মনে রাখা।",
-    "এক দিন, এক দিন করে — পুরো জীবন বদলে যায়।",
-    "যে সময়টা আপনি ফিরে পাচ্ছেন, সেটাই আপনার আসল পুরস্কার।",
-    "স্ট্রিক ভাঙলেও শেখাটা থেকে যায়। আবার শুরু করুন, আরো স্মার্টভাবে।",
+    "Every big change starts with one small 'no'.",
+    "You are stronger than your habit.",
+    "An urge is like a wave: it rises, peaks, and passes. Just hold on for 15 minutes.",
+    "Falling down isn't failure. Staying down is.",
+    "Today's struggle is tomorrow's strength.",
+    "You don't have to prove anything to anyone. Just win today.",
+    "Discipline is remembering what you want most.",
+    "One day at a time, a whole life changes.",
+    "The time you get back is your real reward.",
+    "A broken streak still leaves the lesson. Start again, smarter.",
 )
 
 private val RESTART_MESSAGES = listOf(
-    "কোনো সমস্যা নেই! পড়ে গেছেন মানে আপনি চেষ্টা করছিলেন। নতুন চেষ্টা এখনই শুরু হলো 💪",
-    "এই চেষ্টা থেকে আপনি জেনেছেন কোন প্রেশারে আপনি দুর্বল হন — এবার সেটার জন্য প্রস্তুত থাকুন।",
-    "নতুন শুরু মানে নতুন রেকর্ড গড়ার সুযোগ! আগের সেরা স্ট্রিক ছাড়িয়ে যান 🚀",
+    "No problem! Falling means you were trying. Your new attempt starts right now 💪",
+    "This attempt showed you which pressure makes you weak. Be ready for it this time.",
+    "A fresh start is a chance for a new record! Beat your previous best streak 🚀",
 )
 
 fun dailyQuote(date: LocalDate = LocalDate.now()): String = QUOTES[date.dayOfYear % QUOTES.size]
@@ -26,10 +26,10 @@ fun dailyQuote(date: LocalDate = LocalDate.now()): String = QUOTES[date.dayOfYea
 fun restartMessage(attemptNumber: Int): String = RESTART_MESSAGES[attemptNumber % RESTART_MESSAGES.size]
 
 fun progressMessage(progress: Float): String = when {
-    progress < 0.10f -> "শুরুটাই সবচেয়ে কঠিন — আর আপনি সেটা পার করছেন!"
-    progress < 0.25f -> "দারুণ চলছে! প্রথম ধাপগুলো পার হয়ে যাচ্ছে।"
-    progress < 0.50f -> "প্রায় অর্ধেক পথ! মস্তিষ্ক নতুন অভ্যাসে মানিয়ে নিচ্ছে।"
-    progress < 0.75f -> "অর্ধেকের বেশি শেষ! এখন হাল ছাড়ার সময় না।"
-    progress < 1.00f -> "লক্ষ্য একদম কাছে! শেষ ধাপে শক্ত থাকুন 🔥"
-    else -> "আপনি পেরেছেন! 🏆"
+    progress < 0.10f -> "The start is the hardest part, and you're getting through it!"
+    progress < 0.25f -> "Going great! The first steps are behind you."
+    progress < 0.50f -> "Almost halfway! Your brain is adapting to the new habit."
+    progress < 0.75f -> "More than half done! This is no time to give up."
+    progress < 1.00f -> "The goal is so close! Stay strong for the last stretch 🔥"
+    else -> "You did it! 🏆"
 }

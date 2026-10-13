@@ -51,12 +51,17 @@ import androidx.compose.ui.unit.dp
 import com.mostafa.quitchallenge.AppViewModel
 import com.mostafa.quitchallenge.data.AttemptResult
 import com.mostafa.quitchallenge.data.Challenge
+import com.mostafa.quitchallenge.data.ChallengeType
+import com.mostafa.quitchallenge.data.MINUTE_MS
+import com.mostafa.quitchallenge.data.formatMinutes
+import com.mostafa.quitchallenge.guard.UsageTracker
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.ui.platform.LocalContext
 import com.mostafa.quitchallenge.data.HOUR_MS
 import com.mostafa.quitchallenge.data.Logic
 import com.mostafa.quitchallenge.data.MILESTONES
 import com.mostafa.quitchallenge.data.Trigger
 import com.mostafa.quitchallenge.data.UrgeLog
-import com.mostafa.quitchallenge.data.bn
 import com.mostafa.quitchallenge.data.formatDate
 import com.mostafa.quitchallenge.data.formatDuration
 import com.mostafa.quitchallenge.data.formatGoal
@@ -87,12 +92,12 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                 title = { Text(c.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "ফিরে যান")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     IconButton(onClick = { showDelete = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = "মুছে ফেলুন")
+                        Icon(Icons.Default.Delete, contentDescription = "Delete")
                     }
                 },
             )
@@ -116,21 +121,23 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                 )
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                     Text(
-                        if (c.isActive) "${(progress * 100).toInt().bn()}%" else "✅",
+                        if (c.isActive) "${(progress * 100).toInt()}%" else "✅",
                         style = MaterialTheme.typography.displaySmall,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        if (c.isActive) formatDuration(elapsed, showSeconds = true) else "চ্যালেঞ্জ সম্পূর্ণ",
+                        if (c.isActive) formatDuration(elapsed, showSeconds = true) else "Challenge completed",
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        "লক্ষ্য: ${formatGoal(c.goalHours)}",
+                        "Goal: ${formatGoal(c.goalHours)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
+
+            if (c.type == ChallengeType.APP_LIMIT && c.isActive) AppUsageCard(c)
 
             when {
                 goalReached -> GoalReachedCard(c, onLevelUp = { vm.completeGoal(c.id, levelUp = true) }, onFinish = {
@@ -145,32 +152,32 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                     )
                     val remaining = Logic.goalMs(c) - elapsed
                     Text(
-                        "বাকি আছে: ${formatDuration(remaining)}",
+                        "Remaining: ${formatDuration(remaining)}",
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Button(onClick = { showUrge = true }, modifier = Modifier.weight(1f)) {
-                            Text("⚡ ইচ্ছা হচ্ছে")
+                            Text("⚡ I feel an urge")
                         }
                         OutlinedButton(
                             onClick = { showRelapse = true },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         ) {
-                            Text("❌ ফেইল করেছি")
+                            Text("❌ I failed")
                         }
                     }
                 }
                 else -> Button(onClick = { vm.restart(c.id) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("🔁 আবার নতুন করে শুরু করো")
+                    Text("🔁 Start again")
                 }
             }
 
             if (c.why.isNotBlank()) {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
                     Column(Modifier.padding(16.dp).fillMaxWidth()) {
-                        Text("❤️ কেন শুরু করেছিলেন", fontWeight = FontWeight.Bold)
+                        Text("❤️ Why you started", fontWeight = FontWeight.Bold)
                         Text(c.why, Modifier.padding(top = 4.dp))
                     }
                 }
@@ -178,29 +185,29 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
 
             MilestoneSection(c, elapsed)
 
-            SectionTitle("📊 পরিসংখ্যান")
+            SectionTitle("📊 Stats")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatBox("বর্তমান চেষ্টা", "#${c.attemptNumber.bn()}", Modifier.weight(1f))
-                StatBox("সম্পূর্ণ", c.completions.bn(), Modifier.weight(1f))
-                StatBox("ফেইল", c.failures.bn(), Modifier.weight(1f))
+                StatBox("Current attempt", "#${c.attemptNumber}", Modifier.weight(1f))
+                StatBox("Completed", "${c.completions}", Modifier.weight(1f))
+                StatBox("Failed", "${c.failures}", Modifier.weight(1f))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatBox("সেরা স্ট্রিক", formatDuration(Logic.bestStreakMs(c, now)), Modifier.weight(1f))
-                StatBox("সামলানো ইচ্ছা", urges.size.bn(), Modifier.weight(1f))
+                StatBox("Best streak", formatDuration(Logic.bestStreakMs(c, now)), Modifier.weight(1f))
+                StatBox("Urges beaten", "${urges.count { it.resisted }}", Modifier.weight(1f))
             }
 
             if (c.attempts.isNotEmpty()) {
-                SectionTitle("🗂 আগের চেষ্টাগুলো")
+                SectionTitle("🗂 Previous attempts")
                 c.attempts.withIndex().reversed().forEach { (i, a) ->
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            val result = if (a.result == AttemptResult.COMPLETED) "✅ সম্পূর্ণ" else "❌ ফেইল"
-                            Text("চেষ্টা #${(i + 1).bn()} — $result", fontWeight = FontWeight.Bold)
-                            Text("টিকে ছিলেন: ${formatDuration(a.durationMs)}")
+                            val result = if (a.result == AttemptResult.COMPLETED) "✅ Completed" else "❌ Failed"
+                            Text("Attempt #${i + 1}: $result", fontWeight = FontWeight.Bold)
+                            Text("Lasted: ${formatDuration(a.durationMs)}")
                             Text(formatDate(a.endedAt), style = MaterialTheme.typography.bodySmall)
                             if (a.triggers.isNotEmpty()) {
                                 Text(
-                                    "কারণ: " + a.triggers.joinToString(", ") { "${it.emoji} ${it.label}" },
+                                    "Pressure: " + a.triggers.joinToString(", ") { "${it.emoji} ${it.label}" },
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }
@@ -219,10 +226,10 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                 vm.logUrge(c.id, intensity, triggers, note)
                 showUrge = false
                 support = SupportMessage(
-                    "আপনি পারবেন! 💪",
+                    "You can do this! 💪",
                     buildString {
-                        append("ইচ্ছাটা সাধারণত ১৫–২০ মিনিটের মধ্যে কমে যায়। শুধু এই সময়টা পার করুন — পানি খান, জায়গা বদলান।")
-                        if (c.why.isNotBlank()) append("\n\nমনে রাখুন কেন শুরু করেছিলেন:\n\"${c.why}\"")
+                        append("An urge usually fades within 15–20 minutes. Just get through that time: drink some water, change your location.")
+                        if (c.why.isNotBlank()) append("\n\nRemember why you started:\n\"${c.why}\"")
                         if (triggers.isNotEmpty()) append("\n\n").append(tipsFor(triggers))
                     },
                 )
@@ -237,11 +244,11 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                 vm.relapse(c.id, triggers, note)
                 showRelapse = false
                 support = SupportMessage(
-                    "নতুন শুরু 🌅",
+                    "A fresh start 🌅",
                     buildString {
-                        append("আগের চেষ্টায় টিকে ছিলেন ${formatDuration(elapsed)}।\n\n")
+                        append("Your last attempt lasted ${formatDuration(elapsed)}.\n\n")
                         append(restartMessage(c.attemptNumber))
-                        if (triggers.isNotEmpty()) append("\n\nএবারের প্ল্যান:\n\n").append(tipsFor(triggers))
+                        if (triggers.isNotEmpty()) append("\n\nYour plan this time:\n\n").append(tipsFor(triggers))
                     },
                 )
             },
@@ -251,15 +258,15 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
     if (showDelete) {
         AlertDialog(
             onDismissRequest = { showDelete = false },
-            title = { Text("চ্যালেঞ্জ মুছে ফেলবেন?") },
-            text = { Text("এই চ্যালেঞ্জের সব চেষ্টা আর লগ মুছে যাবে। এটা ফেরত আনা যাবে না।") },
+            title = { Text("Delete this challenge?") },
+            text = { Text("All attempts and logs of this challenge will be deleted. This can't be undone.") },
             confirmButton = {
                 TextButton(onClick = {
                     showDelete = false
                     vm.delete(c.id)
-                }) { Text("মুছে ফেলুন", color = MaterialTheme.colorScheme.error) }
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showDelete = false }) { Text("না") } },
+            dismissButton = { TextButton(onClick = { showDelete = false }) { Text("Cancel") } },
         )
     }
 
@@ -268,7 +275,7 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
             onDismissRequest = { support = null },
             title = { Text(msg.title) },
             text = { Text(msg.body, Modifier.verticalScroll(rememberScrollState())) },
-            confirmButton = { TextButton(onClick = { support = null }) { Text("ঠিক আছে") } },
+            confirmButton = { TextButton(onClick = { support = null }) { Text("OK") } },
         )
     }
 }
@@ -284,13 +291,13 @@ private fun GoalReachedCard(c: Challenge, onLevelUp: () -> Unit, onFinish: () ->
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text("🏆", style = MaterialTheme.typography.displayMedium)
-            Text("অভিনন্দন! চ্যালেঞ্জ সম্পূর্ণ!", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Congratulations! Challenge complete!", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                "আপনি ${formatGoal(c.goalHours)} আসক্তি থেকে দূরে থেকেছেন। এবার পরের লেভেল নিন — লক্ষ্য হবে ${formatGoal(Logic.nextLevelGoal(c.goalHours))}।",
+                "You stayed strong for ${formatGoal(c.goalHours)}. Take the next level: the goal becomes ${formatGoal(Logic.nextLevelGoal(c.goalHours))}.",
                 textAlign = TextAlign.Center,
             )
-            Button(onClick = onLevelUp, modifier = Modifier.fillMaxWidth()) { Text("🔥 পরের লেভেল শুরু করো") }
-            TextButton(onClick = onFinish) { Text("এখানেই শেষ করি") }
+            Button(onClick = onLevelUp, modifier = Modifier.fillMaxWidth()) { Text("🔥 Start next level") }
+            TextButton(onClick = onFinish) { Text("Finish here") }
         }
     }
 }
@@ -299,10 +306,10 @@ private fun GoalReachedCard(c: Challenge, onLevelUp: () -> Unit, onFinish: () ->
 private fun MilestoneSection(c: Challenge, elapsed: Long) {
     val relevant = MILESTONES.filter { it.hours <= maxOf(c.goalHours, 24) }
     if (relevant.isEmpty()) return
-    SectionTitle("🎖 মাইলস্টোন")
+    SectionTitle("🎖 Milestones")
     Logic.nextMilestone(elapsed)?.takeIf { c.isActive }?.let { next ->
         Text(
-            "পরের ব্যাজ ${next.emoji} ${next.label} — আর ${formatDuration(next.hours * HOUR_MS - elapsed)}",
+            "Next badge ${next.emoji} ${next.label} in ${formatDuration(next.hours * HOUR_MS - elapsed)}",
             style = MaterialTheme.typography.bodyMedium,
         )
     }
@@ -325,25 +332,25 @@ private fun UrgeDialog(onDismiss: () -> Unit, onSave: (Int, List<Trigger>, Strin
     var note by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("⚡ ইচ্ছা হচ্ছে?") },
+        title = { Text("⚡ Feeling an urge?") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("ইচ্ছাটা কতটা তীব্র? ${intensity.toInt().bn()}/৫")
+                Text("How strong is it? ${intensity.toInt()}/5")
                 Slider(value = intensity, onValueChange = { intensity = it }, valueRange = 1f..5f, steps = 3)
-                Text("কোন প্রেশার থেকে আসছে?")
+                Text("What pressure is it coming from?")
                 TriggerPicker(triggers) { triggers = it }
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it.take(200) },
-                    label = { Text("নোট (ঐচ্ছিক)") },
+                    label = { Text("Note (optional)") },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(intensity.toInt(), triggers, note) }) { Text("লগ করো, আমি সামলাবো") }
+            TextButton(onClick = { onSave(intensity.toInt(), triggers, note) }) { Text("Log it, I'll handle it") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("বাতিল") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
 
@@ -353,25 +360,59 @@ private fun RelapseDialog(onDismiss: () -> Unit, onConfirm: (List<Trigger>, Stri
     var note by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("ফেইল করেছেন? সমস্যা নেই") },
+        title = { Text("Slipped? That's okay") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("সৎভাবে লিখুন কী হয়েছিল — এটা থেকেই পরের বারের প্ল্যান তৈরি হবে। চ্যালেঞ্জ আবার শূন্য থেকে শুরু হবে।")
-                Text("কোন প্রেশারে হেরে গেলেন?")
+                Text("Be honest about what happened. Your next plan is built from it. The challenge will restart from zero.")
+                Text("Which pressure got you?")
                 TriggerPicker(triggers) { triggers = it }
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it.take(200) },
-                    label = { Text("কী হয়েছিল? (ঐচ্ছিক)") },
+                    label = { Text("What happened? (optional)") },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(triggers, note) }) {
-                Text("নতুন করে শুরু করো", color = MaterialTheme.colorScheme.error)
+                Text("Restart challenge", color = MaterialTheme.colorScheme.error)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("বাতিল") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
+}
+
+@Composable
+private fun AppUsageCard(c: Challenge) {
+    val context = LocalContext.current
+    val usage by rememberTodayUsage(c)
+    val used = usage.values.sum()
+    val limitMs = c.dailyLimitMinutes * MINUTE_MS
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("📲 Today's app time", fontWeight = FontWeight.Bold)
+            if (!UsageTracker.hasUsageAccess(context)) {
+                Text("Allow \"Usage access\" so the app can measure your screen time, like Digital Wellbeing does.")
+                Button(onClick = { context.startActivity(UsageTracker.usageAccessSettingsIntent()) }) {
+                    Text("Grant usage access")
+                }
+                return@Column
+            }
+            Text("${formatDuration(used)} used of ${formatMinutes(c.dailyLimitMinutes)} limit")
+            LinearProgressIndicator(
+                progress = { if (limitMs == 0L) (if (used > 0) 1f else 0f) else (used.toFloat() / limitMs).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth(),
+                color = if (limitMs > 0 && used >= limitMs * 8 / 10) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            )
+            c.trackedApps.forEach { app ->
+                Text("• ${app.label}: ${formatDuration(usage[app.packageName] ?: 0L)}", style = MaterialTheme.typography.bodySmall)
+            }
+            Text(
+                "Cross the limit and this challenge restarts automatically.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }

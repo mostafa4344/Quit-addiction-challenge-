@@ -5,26 +5,35 @@ import kotlinx.serialization.Serializable
 /** Pressures that push someone back toward the habit, each with a coping tip. */
 @Serializable
 enum class Trigger(val label: String, val emoji: String, val tip: String) {
-    STRESS("স্ট্রেস / চাপ", "😣", "৫ মিনিট গভীর শ্বাস নিন (৪ সেকেন্ড টানুন, ৭ সেকেন্ড ধরে রাখুন, ৮ সেকেন্ডে ছাড়ুন) অথবা একটু হেঁটে আসুন।"),
-    BOREDOM("একঘেয়েমি", "😐", "আগে থেকে একটা 'বোর হলে করবো' লিস্ট রাখুন — বই পড়া, ব্যায়াম, নতুন কোনো স্কিল শেখা।"),
-    LONELINESS("একাকীত্ব", "😔", "কোনো বন্ধু বা পরিবারের কাউকে ফোন দিন, মানুষের মাঝে বের হয়ে যান।"),
-    TIREDNESS("ক্লান্তি / ঘুম কম", "🥱", "ক্লান্ত থাকলে মন দুর্বল হয় — সময়মতো ঘুমান, ফোন বিছানা থেকে দূরে রাখুন।"),
-    ANXIETY("দুশ্চিন্তা", "😰", "চিন্তাগুলো খাতায় লিখে ফেলুন, তারপর ছোট একটা কাজ শেষ করুন।"),
-    SOCIAL("বন্ধুদের চাপ", "👥", "আগে থেকেই 'না' বলার একটা বাক্য ঠিক করে রাখুন, ঝুঁকির জায়গা এড়িয়ে চলুন।"),
-    HABIT("অভ্যাস / নির্দিষ্ট সময়", "⏰", "যে সময়ে বেশি ইচ্ছা হয়, সেই সময়ে অন্য একটা রুটিন বসিয়ে দিন।"),
-    SADNESS("মন খারাপ", "😢", "অনুভূতিটা মেনে নিন, পছন্দের কাজ করুন বা কাছের কারো সাথে কথা বলুন।"),
-    ANGER("রাগ", "😠", "জায়গা বদলান, ঠান্ডা পানি খান, ধীরে ধীরে ১০ পর্যন্ত গুনুন।"),
-    CELEBRATION("আনন্দ / উদযাপন", "🎉", "উদযাপনের অন্য উপায় ঠিক করে রাখুন — পছন্দের খাবার, ঘোরাঘুরি।"),
+    STRESS("Stress", "😣", "Take 5 slow breaths (in for 4s, hold 7s, out for 8s) or go for a short walk."),
+    BOREDOM("Boredom", "😐", "Keep a ready 'when I'm bored' list: read, work out, learn a new skill."),
+    LONELINESS("Loneliness", "😔", "Call a friend or family member, or go somewhere with people around."),
+    TIREDNESS("Tiredness", "🥱", "A tired mind is a weak mind. Sleep on time and keep the phone away from your bed."),
+    ANXIETY("Anxiety", "😰", "Write your worries down on paper, then finish one small task."),
+    SOCIAL("Peer pressure", "👥", "Prepare a sentence for saying 'no' in advance and avoid risky places."),
+    HABIT("Habit / routine time", "⏰", "At the time the urge usually hits, put a different routine in its place."),
+    SADNESS("Feeling low", "😢", "Accept the feeling, do something you enjoy, or talk to someone close."),
+    ANGER("Anger", "😠", "Change your location, drink cold water, slowly count to 10."),
+    CELEBRATION("Celebration", "🎉", "Plan other ways to celebrate: a favourite meal, an outing."),
 }
 
 @Serializable
 enum class Category(val label: String, val emoji: String) {
-    SOCIAL_MEDIA("সোশ্যাল মিডিয়া", "📱"),
-    GAMING("মোবাইল / গেম", "🎮"),
-    SMOKING("ধূমপান", "🚬"),
-    PORN("পর্নোগ্রাফি", "🚫"),
-    JUNK_FOOD("জাঙ্ক ফুড", "🍔"),
-    OTHER("অন্যান্য", "⭐"),
+    SOCIAL_MEDIA("Social media", "📱"),
+    GAMING("Mobile / games", "🎮"),
+    SMOKING("Smoking", "🚬"),
+    PORN("Pornography", "🚫"),
+    JUNK_FOOD("Junk food", "🍔"),
+    OTHER("Other", "⭐"),
+}
+
+@Serializable
+enum class ChallengeType {
+    /** Stay away completely; the user reports relapses themselves. */
+    TIMER,
+
+    /** Keep chosen apps under a daily time limit; tracked automatically via usage access. */
+    APP_LIMIT,
 }
 
 @Serializable
@@ -43,6 +52,9 @@ data class Attempt(
 }
 
 @Serializable
+data class TrackedApp(val packageName: String, val label: String)
+
+@Serializable
 data class Challenge(
     val id: String,
     val name: String,
@@ -53,6 +65,9 @@ data class Challenge(
     /** Start of the running attempt, or null once the user has finished the challenge. */
     val currentStart: Long?,
     val attempts: List<Attempt> = emptyList(),
+    val type: ChallengeType = ChallengeType.TIMER,
+    val trackedApps: List<TrackedApp> = emptyList(),
+    val dailyLimitMinutes: Int = 0,
 ) {
     val isActive: Boolean get() = currentStart != null
     val attemptNumber: Int get() = attempts.size + 1
@@ -60,7 +75,10 @@ data class Challenge(
     val completions: Int get() = attempts.count { it.result == AttemptResult.COMPLETED }
 }
 
-/** An urge the user felt and resisted. */
+@Serializable
+enum class UrgeSource { MANUAL, KEYWORD }
+
+/** An urge the user felt, logged by hand or raised by the keyword guard. */
 @Serializable
 data class UrgeLog(
     val id: String,
@@ -69,10 +87,21 @@ data class UrgeLog(
     val intensity: Int,
     val triggers: List<Trigger> = emptyList(),
     val note: String = "",
+    val source: UrgeSource = UrgeSource.MANUAL,
+    val resisted: Boolean = true,
+)
+
+val DEFAULT_KEYWORDS = listOf("porn", "xxx", "nsfw", "nude", "sex video", "xvideos", "pornhub", "onlyfans")
+
+@Serializable
+data class GuardSettings(
+    val keywordGuard: Boolean = true,
+    val keywords: List<String> = DEFAULT_KEYWORDS,
 )
 
 @Serializable
 data class AppData(
     val challenges: List<Challenge> = emptyList(),
     val urges: List<UrgeLog> = emptyList(),
+    val settings: GuardSettings = GuardSettings(),
 )

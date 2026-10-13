@@ -31,11 +31,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.mostafa.quitchallenge.data.AppData
 import com.mostafa.quitchallenge.data.Challenge
+import com.mostafa.quitchallenge.data.ChallengeType
 import com.mostafa.quitchallenge.data.Logic
-import com.mostafa.quitchallenge.data.bn
 import com.mostafa.quitchallenge.data.dailyQuote
 import com.mostafa.quitchallenge.data.formatDuration
 import com.mostafa.quitchallenge.data.formatGoal
+import com.mostafa.quitchallenge.data.formatMinutes
 
 @Composable
 fun HomeScreen(data: AppData, onOpen: (String) -> Unit, onNew: () -> Unit) {
@@ -44,12 +45,12 @@ fun HomeScreen(data: AppData, onOpen: (String) -> Unit, onNew: () -> Unit) {
         compareByDescending<Challenge> { it.isActive }.thenByDescending { it.createdAt },
     )
     Scaffold(
-        topBar = { TopAppBar(title = { Text("আসক্তি চ্যালেঞ্জ 🔥") }) },
+        topBar = { TopAppBar(title = { Text("Quit Challenge 🔥") }) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onNew,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("নতুন চ্যালেঞ্জ") },
+                text = { Text("New challenge") },
             )
         },
     ) { padding ->
@@ -66,7 +67,7 @@ fun HomeScreen(data: AppData, onOpen: (String) -> Unit, onNew: () -> Unit) {
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                 ) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("💡 আজকের অনুপ্রেরণা", fontWeight = FontWeight.Bold)
+                        Text("💡 Today's motivation", fontWeight = FontWeight.Bold)
                         Text(dailyQuote(), Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
@@ -81,12 +82,13 @@ fun HomeScreen(data: AppData, onOpen: (String) -> Unit, onNew: () -> Unit) {
                     ) {
                         Text("🎯", style = MaterialTheme.typography.displayMedium)
                         Text(
-                            "এখনো কোনো চ্যালেঞ্জ নেই",
+                            "No challenges yet",
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(top = 8.dp),
                         )
                         Text(
-                            "নিচের বাটনে চাপ দিয়ে প্রথম চ্যালেঞ্জ শুরু করুন — কতদিন, কত ঘণ্টা আসক্তি থেকে দূরে থাকবেন সেটা ঠিক করুন।",
+                            "Tap the button below to start your first challenge: choose how many days or hours " +
+                                "you'll stay away, or set a daily time limit for apps like Facebook or YouTube.",
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(top = 4.dp),
                         )
@@ -113,12 +115,18 @@ private fun ChallengeCard(c: Challenge, now: Long, onClick: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
                 )
-                Text("চেষ্টা #${c.attemptNumber.bn()}", style = MaterialTheme.typography.labelMedium)
+                Text("Attempt #${c.attemptNumber}", style = MaterialTheme.typography.labelMedium)
+            }
+            if (c.type == ChallengeType.APP_LIMIT) {
+                Text(
+                    "📲 ${formatMinutes(c.dailyLimitMinutes)} / day on ${c.trackedApps.joinToString(", ") { it.label }}",
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
             when {
-                !c.isActive -> Text("✅ সম্পূর্ণ — লক্ষ্য ছিল ${formatGoal(c.goalHours)}")
+                !c.isActive -> Text("✅ Completed. Goal was ${formatGoal(c.goalHours)}")
                 reached -> Text(
-                    "🏆 লক্ষ্য পূরণ হয়েছে! পুরস্কার নিতে ট্যাপ করুন",
+                    "🏆 Goal reached! Tap to claim your reward",
                     color = MaterialTheme.colorScheme.secondary,
                     fontWeight = FontWeight.Bold,
                 )
@@ -126,7 +134,7 @@ private fun ChallengeCard(c: Challenge, now: Long, onClick: () -> Unit) {
                     Text(formatDuration(Logic.elapsedMs(c, now), showSeconds = true))
                     LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
                     Text(
-                        "লক্ষ্য: ${formatGoal(c.goalHours)} • ${(progress * 100).toInt().bn()}%",
+                        "Goal: ${formatGoal(c.goalHours)} • ${(progress * 100).toInt()}%",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }

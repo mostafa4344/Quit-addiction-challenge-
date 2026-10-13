@@ -3,23 +3,28 @@ package com.mostafa.quitchallenge
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import com.mostafa.quitchallenge.data.AppData
-import com.mostafa.quitchallenge.data.Attempt
-import com.mostafa.quitchallenge.data.AttemptResult
+import com.mostafa.quitchallenge.data.AppGraph
 import com.mostafa.quitchallenge.data.Category
 import com.mostafa.quitchallenge.data.Challenge
-import com.mostafa.quitchallenge.data.Logic
-import com.mostafa.quitchallenge.data.Repository
+import com.mostafa.quitchallenge.data.ChallengeType
+import com.mostafa.quitchallenge.data.TrackedApp
 import com.mostafa.quitchallenge.data.Trigger
-import com.mostafa.quitchallenge.data.UrgeLog
 import kotlinx.coroutines.flow.StateFlow
-import java.io.File
 import java.util.UUID
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
-    private val repo = Repository(File(app.filesDir, "data.json"))
+    private val repo = AppGraph.repo(app)
     val data: StateFlow<AppData> = repo.data
 
-    fun createChallenge(name: String, category: Category, goalHours: Int, why: String): String {
+    fun createChallenge(
+        name: String,
+        category: Category,
+        goalHours: Int,
+        why: String,
+        type: ChallengeType,
+        apps: List<TrackedApp>,
+        dailyLimitMinutes: Int,
+    ): String {
         val now = System.currentTimeMillis()
         val challenge = Challenge(
             id = UUID.randomUUID().toString(),
@@ -29,50 +34,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             why = why.trim(),
             createdAt = now,
             currentStart = now,
+            type = type,
+            trackedApps = if (type == ChallengeType.APP_LIMIT) apps else emptyList(),
+            dailyLimitMinutes = dailyLimitMinutes,
         )
         repo.update { it.copy(challenges = it.challenges + challenge) }
         return challenge.id
     }
 
-    fun logUrge(challengeId: String, intensity: Int, triggers: List<Trigger>, note: String) {
-        val log = UrgeLog(
-            id = UUID.randomUUID().toString(),
-            challengeId = challengeId,
-            time = System.currentTimeMillis(),
-            intensity = intensity,
-            triggers = triggers,
-            note = note.trim(),
-        )
-        repo.update { it.copy(urges = it.urges + log) }
-    }
+    fun logUrge(challengeId: String, intensity: Int, triggers: List<Trigger>, note: String) =
+        repo.logUrge(challengeId, intensity, triggers, note)
 
-    /** Records the failed attempt and immediately starts a fresh one. */
-    fun relapse(challengeId: String, triggers: List<Trigger>, note: String) {
-        val now = System.currentTimeMillis()
-        updateChallenge(challengeId) { c ->
-            val start = c.currentStart ?: return@updateChallenge c
-            c.copy(
-                attempts = c.attempts + Attempt(start, now, AttemptResult.FAILED, triggers, note.trim()),
-                currentStart = now,
-            )
-        }
-    }
+    fun relapse(challengeId: String, triggers: List<Trigger>, note: String) = repo.relapse(challengeId, triggers, note)
 
-    /** Claims a reached goal; either levels up (double goal) or ends the challenge. */
-    fun completeGoal(challengeId: String, levelUp: Boolean) {
-        val now = System.currentTimeMillis()
-        updateChallenge(challengeId) { c ->
-            val start = c.currentStart ?: return@updateChallenge c
-            c.copy(
-                attempts = c.attempts + Attempt(start, now, AttemptResult.COMPLETED),
-                currentStart = if (levelUp) now else null,
-                goalHours = if (levelUp) Logic.nextLevelGoal(c.goalHours) else c.goalHours,
-            )
-        }
-    }
+    fun completeGoal(challengeId: String, levelUp: Boolean) = repo.completeGoal(challengeId, levelUp)
 
     fun restart(challengeId: String) {
-        updateChallenge(challengeId) { it.copy(currentStart = System.currentTimeMillis()) }
+        repo.updateChallenge(challengeId) { it.copy(currentStart = System.currentTimeMillis()) }
     }
 
     fun delete(challengeId: String) {
@@ -84,7 +62,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun updateChallenge(id: String, transform: (Challenge) -> Challenge) {
-        repo.update { d -> d.copy(challenges = d.challenges.map { if (it.id == id) transform(it) else it }) }
+    fun setKeywordGuard(enabled: Boolean) {
+        repo.update { it.copy(settings = it.settings.copy(keywordGuard = enabled)) }
+    }
+
+    fun addKeyword(keyword: String) {
+        val kw = keyword.trim()
+        if (kw.isEmpty()) return
+        repo.update { d ->
+            if (d.settings.keywords.any { it.equals(kw, ignoreCase = true) }) d
+            else d.copy(settings = d.settings.copy(keywords = d.settings.keywords + kw))
+        }
+    }
+
+    fun removeKeyword(keyword: String) {
+        repo.update { it.copy(settings = it.settings.copy(keywords = it.settings.keywords - keyword)) }
     }
 }
