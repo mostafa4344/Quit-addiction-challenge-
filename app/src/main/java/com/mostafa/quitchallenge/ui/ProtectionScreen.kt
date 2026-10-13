@@ -127,6 +127,8 @@ fun ProtectionScreen(data: AppData, vm: AppViewModel) {
                 }
             }
 
+            DomainCard(data, vm)
+
             BackupCard()
         }
     }
@@ -200,5 +202,40 @@ private fun BackupCard() {
             },
             dismissButton = { TextButton(onClick = { pendingImport = null }) { Text("Cancel") } },
         )
+    }
+}
+
+@Composable
+private fun DomainCard(data: AppData, vm: AppViewModel) {
+    var newDomain by remember { mutableStateOf("") }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("🌐 Blocked websites", fontWeight = FontWeight.Bold)
+            Text(
+                "Opening one of these sites (or any of its subdomains) in Chrome, Samsung Internet, Firefox, Edge, Brave or Opera shows the \"Are you sure?\" screen, even from a link. Uses the keyword guard switch above.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                data.settings.domains.forEach { d ->
+                    InputChip(selected = false, onClick = { vm.removeDomain(d) }, label = { Text("$d ✕") })
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = newDomain,
+                    onValueChange = { newDomain = it.take(80) },
+                    label = { Text("e.g. example.com") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+                Button(
+                    onClick = {
+                        vm.addDomain(newDomain)
+                        newDomain = ""
+                    },
+                    enabled = newDomain.contains('.'),
+                ) { Text("Add") }
+            }
+        }
     }
 }

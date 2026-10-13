@@ -52,7 +52,10 @@ import androidx.compose.ui.unit.dp
 import com.mostafa.quitchallenge.data.Category
 import com.mostafa.quitchallenge.data.ChallengeType
 import com.mostafa.quitchallenge.data.TrackedApp
+import com.mostafa.quitchallenge.data.StartOption
+import com.mostafa.quitchallenge.data.formatDate
 import com.mostafa.quitchallenge.data.formatGoal
+import com.mostafa.quitchallenge.data.startTimeFor
 import com.mostafa.quitchallenge.data.formatMinutes
 import com.mostafa.quitchallenge.guard.UsageTracker
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +77,7 @@ fun NewChallengeScreen(
         dailyLimitMinutes: Int,
         minutesPerDay: Int,
         moneyPerDay: Double,
+        startAt: Long,
     ) -> Unit,
 ) {
     var type by rememberSaveable { mutableStateOf(ChallengeType.TIMER) }
@@ -86,6 +90,8 @@ fun NewChallengeScreen(
     var apps by remember { mutableStateOf(emptyList<TrackedApp>()) }
     var costMinutes by rememberSaveable { mutableStateOf("") }
     var costMoney by rememberSaveable { mutableStateOf("") }
+    var start by rememberSaveable { mutableStateOf(StartOption.NOW) }
+    var committed by rememberSaveable { mutableStateOf(false) }
     var showPicker by remember { mutableStateOf(false) }
 
     val isAppLimit = type == ChallengeType.APP_LIMIT
@@ -263,6 +269,32 @@ fun NewChallengeScreen(
                 )
             }
 
+            SectionTitle("When do you start?")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StartOption.entries.forEach { opt ->
+                    FilterChip(selected = start == opt, onClick = { start = opt }, label = { Text(opt.label) })
+                }
+            }
+            if (start != StartOption.NOW) {
+                Text(
+                    "Starts ${formatDate(startTimeFor(start, System.currentTimeMillis()))}. A fresh start, like a new week or month, helps you stick with it.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { committed = !committed },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(checked = committed, onCheckedChange = { committed = it })
+                Text(
+                    "I commit to this challenge. If I slip, I'll restart and learn from it instead of giving up.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+
             if (isAppLimit && apps.isEmpty()) {
                 Text("Choose at least one app to track.", color = MaterialTheme.colorScheme.error)
             }
@@ -278,9 +310,10 @@ fun NewChallengeScreen(
                         limitMinutes,
                         costMinutes.toIntOrNull() ?: 0,
                         costMoney.toDoubleOrNull() ?: 0.0,
+                        startTimeFor(start, System.currentTimeMillis()),
                     )
                 },
-                enabled = valid,
+                enabled = valid && committed,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("🚀 Start challenge")

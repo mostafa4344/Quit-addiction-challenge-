@@ -127,6 +127,10 @@ private fun ChallengeCard(c: Challenge, now: Long, onClick: () -> Unit) {
             }
             when {
                 !c.isActive -> Text("✅ Completed. Goal was ${formatGoal(c.goalHours)}")
+                !Logic.hasStarted(c, now) -> Text(
+                    "⏳ Starts in ${formatDuration((c.currentStart ?: now) - now)} • Goal: ${formatGoal(c.goalHours)}",
+                    fontWeight = FontWeight.Bold,
+                )
                 reached -> Text(
                     "🏆 Goal reached! Tap to claim your reward",
                     color = MaterialTheme.colorScheme.secondary,

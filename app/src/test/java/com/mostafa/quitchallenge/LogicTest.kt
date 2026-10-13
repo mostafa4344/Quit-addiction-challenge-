@@ -11,6 +11,11 @@ import com.mostafa.quitchallenge.data.HOUR_MS
 import com.mostafa.quitchallenge.data.Logic
 import com.mostafa.quitchallenge.data.MINUTE_MS
 import com.mostafa.quitchallenge.data.OpenAttempt
+import com.mostafa.quitchallenge.data.StartOption
+import com.mostafa.quitchallenge.data.hostOf
+import com.mostafa.quitchallenge.data.matchDomain
+import com.mostafa.quitchallenge.data.riskHeatmap
+import com.mostafa.quitchallenge.data.startTimeFor
 import com.mostafa.quitchallenge.data.openStats
 import com.mostafa.quitchallenge.data.Trigger
 import com.mostafa.quitchallenge.data.UrgeLog
@@ -125,6 +130,42 @@ class LogicTest {
             OpenAttempt(70, "yt", skipped = true),
         )
         assertEquals(2 to 1, openStats(attempts, setOf("fb"), from = 10))
+    }
+
+    @Test
+    fun browserAddressBarMatchesBlockedDomains() {
+        val domains = listOf("pornhub.com", "www.example.org")
+        assertEquals("pornhub.com", hostOf("https://www.pornhub.com/view?x=1")?.let { matchDomain(it, domains) })
+        assertEquals("pornhub.com", hostOf("m.pornhub.com/abc")?.let { matchDomain(it, domains) })
+        assertEquals("example.org", hostOf("example.org")?.let { matchDomain(it, domains) })
+        assertNull(hostOf("notpornhub.com")?.let { matchDomain(it, domains) })
+        assertNull(hostOf("search for something"))
+    }
+
+    @Test
+    fun startOptionsLandOnFreshStarts() {
+        // Wednesday 15 Jan 2025, 10:00 UTC.
+        val now = java.time.ZonedDateTime.of(2025, 1, 15, 10, 0, 0, 0, ZoneOffset.UTC).toInstant().toEpochMilli()
+        fun at(y: Int, m: Int, d: Int, h: Int) = java.time.ZonedDateTime.of(y, m, d, h, 0, 0, 0, ZoneOffset.UTC).toInstant().toEpochMilli()
+        assertEquals(now, startTimeFor(StartOption.NOW, now, ZoneOffset.UTC))
+        assertEquals(at(2025, 1, 16, 6), startTimeFor(StartOption.TOMORROW, now, ZoneOffset.UTC))
+        assertEquals(at(2025, 1, 20, 0), startTimeFor(StartOption.NEXT_MONDAY, now, ZoneOffset.UTC))
+        assertEquals(at(2025, 2, 1, 0), startTimeFor(StartOption.NEXT_MONTH, now, ZoneOffset.UTC))
+    }
+
+    @Test
+    fun heatmapBucketsByWeekdayAndDayPart() {
+        // 1 Jan 1970 was a Thursday.
+        val thursdayNight = 23 * HOUR_MS
+        val data = AppData(
+            urges = listOf(
+                UrgeLog("a", "c1", thursdayNight, 3),
+                UrgeLog("b", "c1", thursdayNight + 1000, 3),
+            ),
+        )
+        val grid = riskHeatmap(data, ZoneOffset.UTC)
+        assertEquals(2, grid[3][DayPart.NIGHT.ordinal])
+        assertEquals(2, grid.sumOf { it.sum() })
     }
 
     @Test

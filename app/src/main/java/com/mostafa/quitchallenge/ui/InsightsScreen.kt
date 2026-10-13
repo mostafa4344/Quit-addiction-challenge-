@@ -38,6 +38,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.mostafa.quitchallenge.data.computeInsights
+import com.mostafa.quitchallenge.data.riskHeatmap
+import com.mostafa.quitchallenge.data.riskSummary
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import com.mostafa.quitchallenge.data.formatDuration
 
 @Composable
@@ -96,6 +104,10 @@ fun InsightsScreen(data: AppData, vm: AppViewModel) {
             val maxPart = insights.dayPartCounts.maxOf { it.second }
             insights.dayPartCounts.forEach { (part, n) ->
                 BarRow(part.label, "$n×", if (maxPart == 0) 0f else n / maxPart.toFloat(), MaterialTheme.colorScheme.primary)
+            }
+            RiskHeatmap(riskHeatmap(data))
+            riskSummary(riskHeatmap(data), insights)?.let {
+                Text("🧭 $it", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
             }
             insights.dayPartCounts.maxByOrNull { it.second }?.takeIf { it.second > 0 }?.let { (part, _) ->
                 Text(
@@ -194,5 +206,40 @@ private fun PlansSection(data: AppData, topTriggers: List<Trigger>, vm: AppViewM
             },
             dismissButton = { TextButton(onClick = { editing = null }) { Text("Cancel") } },
         )
+    }
+}
+
+/** Weekday × part-of-day grid; darker cells mean more urges and slips. */
+@Composable
+private fun RiskHeatmap(grid: List<List<Int>>) {
+    val max = grid.maxOf { row -> row.max() }
+    val color = MaterialTheme.colorScheme.secondary
+    val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    val parts = listOf("🌅", "☀️", "🌇", "🌙")
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("", Modifier.width(40.dp))
+            parts.forEach { Text(it, Modifier.weight(1f), textAlign = TextAlign.Center) }
+        }
+        grid.forEachIndexed { d, row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(days[d], Modifier.width(40.dp), style = MaterialTheme.typography.bodySmall)
+                row.forEach { n ->
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(24.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(
+                                if (n == 0 || max == 0) MaterialTheme.colorScheme.surfaceVariant
+                                else color.copy(alpha = 0.25f + 0.75f * n / max),
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (n > 0) Text("$n", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+        }
     }
 }

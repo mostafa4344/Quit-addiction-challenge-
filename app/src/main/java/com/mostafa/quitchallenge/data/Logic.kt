@@ -39,6 +39,9 @@ object Logic {
         return (elapsedMs(c, now).toDouble() / goal).toFloat().coerceIn(0f, 1f)
     }
 
+    /** False while a challenge is scheduled to begin later. */
+    fun hasStarted(c: Challenge, now: Long): Boolean = c.currentStart != null && c.currentStart <= now
+
     fun isGoalReached(c: Challenge, now: Long): Boolean =
         c.isActive && elapsedMs(c, now) >= goalMs(c)
 
@@ -249,4 +252,63 @@ fun formatMoney(amount: Double, currency: String): String =
 fun openStats(attempts: List<OpenAttempt>, packages: Set<String>, from: Long): Pair<Int, Int> {
     val today = attempts.filter { it.time >= from && it.packageName in packages }
     return today.size to today.count { it.skipped }
+}
+
+/** Pulls the host out of whatever a browser shows in its address bar ("m.site.com/path", "https://site.com"). */
+fun hostOf(addressBarText: String): String? {
+    val t = addressBarText.trim().lowercase()
+    if (t.isEmpty() || ' ' in t) return null
+    val noScheme = t.substringAfter("://")
+    val host = noScheme.substringBefore('/').substringBefore('?').substringBefore(':')
+    return host.takeIf { '.' in it }
+}
+
+/** Returns the blocked domain [host] belongs to, matching subdomains too. */
+fun matchDomain(host: String, domains: List<String>): String? =
+    domains.map { it.trim().lowercase().removePrefix("www.") }
+        .firstOrNull { d -> d.isNotEmpty() && (host == d || host.endsWith(".$d")) }
+
+/** Urges and slips counted by weekday (Monday first) × part of day. */
+fun riskHeatmap(data: AppData, zone: ZoneId = ZoneId.systemDefault()): List<List<Int>> {
+    val grid = List(7) { IntArray(DayPart.entries.size) }
+    val times = data.urges.map { it.time } +
+        data.challenges.flatMap { c -> c.attempts.filter { it.result == AttemptResult.FAILED }.map { it.endedAt } }
+    times.forEach { t ->
+        val day = Instant.ofEpochMilli(t).atZone(zone).dayOfWeek.value - 1
+        grid[day][dayPartOf(t, zone).ordinal]++
+    }
+    return grid.map { it.toList() }
+}
+
+private val DAY_NAMES = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+private val PART_NAMES = listOf("mornings", "afternoons", "evenings", "nights")
+
+/** One plain sentence about the riskiest moment, e.g. "Your hardest time is Monday nights, mostly from stress." */
+fun riskSummary(heatmap: List<List<Int>>, insights: Insights): String? {
+    var best = -1 to -1
+    var max = 0
+    heatmap.forEachIndexed { d, row -> row.forEachIndexed { p, n -> if (n > max) { max = n; best = d to p } } }
+    if (max < 2) return null
+    val trigger = insights.triggerCounts.firstOrNull()?.first
+    val base = "Your hardest time is ${DAY_NAMES[best.first]} ${PART_NAMES[best.second]} ($max urges or slips)"
+    return if (trigger != null) "$base, and ${trigger.label.lowercase()} is the pressure that hits most." else "$base."
+}
+
+/** When a new challenge can begin. Fresh-start moments (a new week or month) boost commitment. */
+enum class StartOption(val label: String) {
+    NOW("Right now"),
+    TOMORROW("Tomorrow morning"),
+    NEXT_MONDAY("Next Monday"),
+    NEXT_MONTH("1st of next month"),
+}
+
+fun startTimeFor(option: StartOption, now: Long, zone: ZoneId = ZoneId.systemDefault()): Long {
+    val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    val date = when (option) {
+        StartOption.NOW -> return now
+        StartOption.TOMORROW -> return today.plusDays(1).atTime(6, 0).atZone(zone).toInstant().toEpochMilli()
+        StartOption.NEXT_MONDAY -> today.with(java.time.temporal.TemporalAdjusters.next(java.time.DayOfWeek.MONDAY))
+        StartOption.NEXT_MONTH -> today.withDayOfMonth(1).plusMonths(1)
+    }
+    return date.atStartOfDay(zone).toInstant().toEpochMilli()
 }

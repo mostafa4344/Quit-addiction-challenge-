@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">Quit Challenge</string>
     <string name="guard_name">Quit Challenge Guard</string>
-    <string name="guard_description">Shows an "Are you sure?" warning when you type a blocked keyword, and stops you when an app crosses your daily time limit. Everything is checked on your phone only; typed text is never saved or sent anywhere.</string>
+    <string name="guard_description">Shows an "Are you sure?" warning when you type a blocked keyword or open a blocked website, and stops you when an app crosses your daily time limit. Everything is checked on your phone only; typed text is never saved or sent anywhere.</string>
     <string name="widget_description">Your running challenge: days clean and progress</string>
 </resources>

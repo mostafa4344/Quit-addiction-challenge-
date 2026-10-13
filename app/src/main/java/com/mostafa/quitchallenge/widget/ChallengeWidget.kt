@@ -58,6 +58,14 @@ class ChallengeWidget : AppWidgetProvider() {
                 return views
             }
 
+            if (!Logic.hasStarted(c, now)) {
+                views.setTextViewText(R.id.widget_title, if (AppLock.isEnabled(context)) "🔥 My challenge" else "${c.category.emoji} ${c.name}")
+                views.setTextViewText(R.id.widget_days, "Starts soon")
+                views.setTextViewText(R.id.widget_elapsed, "in ${formatDuration((c.currentStart ?: now) - now)}")
+                views.setTextViewText(R.id.widget_goal, "Goal: ${formatGoal(c.goalHours)}")
+                views.setViewVisibility(R.id.widget_progress, View.GONE)
+                return views
+            }
             val elapsed = Logic.elapsedMs(c, now)
             val days = elapsed / 86_400_000L
             val progress = (Logic.progress(c, now) * 100).toInt()

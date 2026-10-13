@@ -183,8 +183,8 @@ fun App(requestedRoute: String? = null, onRouteConsumed: () -> Unit = {}, vm: Ap
                 route == PROTECT -> ProtectionScreen(data, vm)
                 route == NEW -> NewChallengeScreen(
                     onBack = { route = HOME },
-                    onCreate = { name, category, goalHours, why, type, apps, limit, minutes, money ->
-                        route = DETAIL + vm.createChallenge(name, category, goalHours, why, type, apps, limit, minutes, money)
+                    onCreate = { name, category, goalHours, why, type, apps, limit, minutes, money, startAt ->
+                        route = DETAIL + vm.createChallenge(name, category, goalHours, why, type, apps, limit, minutes, money, startAt)
                     },
                 )
                 route.startsWith(SOS) -> {

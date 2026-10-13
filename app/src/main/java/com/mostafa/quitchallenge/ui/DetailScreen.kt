@@ -143,6 +143,20 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
             if (c.type == ChallengeType.APP_LIMIT && c.isActive) AppUsageCard(c, vm.data.collectAsState().value.openAttempts)
 
             when {
+                c.isActive && !Logic.hasStarted(c, now) -> {
+                    Text(
+                        "⏳ Your challenge starts in ${formatDuration((c.currentStart ?: now) - now, showSeconds = true)}",
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        "Use the time to prepare: remove triggers, write your if-then plans in Insights, and tell someone you trust.",
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedButton(onClick = { vm.restart(c.id) }, modifier = Modifier.fillMaxWidth()) { Text("Start right now instead") }
+                }
                 goalReached -> GoalReachedCard(c, onLevelUp = { vm.completeGoal(c.id, levelUp = true) }, onFinish = {
                     vm.completeGoal(c.id, levelUp = false)
                 })

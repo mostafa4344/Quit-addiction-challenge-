@@ -9,6 +9,7 @@ import com.mostafa.quitchallenge.data.Challenge
 import com.mostafa.quitchallenge.data.ChallengeType
 import com.mostafa.quitchallenge.data.TrackedApp
 import com.mostafa.quitchallenge.data.Trigger
+import com.mostafa.quitchallenge.data.hostOf
 import com.mostafa.quitchallenge.guard.SupportWorker
 import kotlinx.coroutines.flow.StateFlow
 import java.util.UUID
@@ -27,6 +28,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         dailyLimitMinutes: Int,
         minutesPerDay: Int = 0,
         moneyPerDay: Double = 0.0,
+        startAt: Long = System.currentTimeMillis(),
     ): String {
         val now = System.currentTimeMillis()
         val challenge = Challenge(
@@ -36,7 +38,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             goalHours = goalHours,
             why = why.trim(),
             createdAt = now,
-            currentStart = now,
+            currentStart = maxOf(startAt, now),
             type = type,
             trackedApps = if (type == ChallengeType.APP_LIMIT) apps else emptyList(),
             dailyLimitMinutes = dailyLimitMinutes,
@@ -93,6 +95,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (d.settings.keywords.any { it.equals(kw, ignoreCase = true) }) d
             else d.copy(settings = d.settings.copy(keywords = d.settings.keywords + kw))
         }
+    }
+
+    fun addDomain(domain: String) {
+        val d = hostOf(domain)?.removePrefix("www.") ?: return
+        repo.update { data ->
+            if (d in data.settings.domains) data else data.copy(settings = data.settings.copy(domains = data.settings.domains + d))
+        }
+    }
+
+    fun removeDomain(domain: String) {
+        repo.update { it.copy(settings = it.settings.copy(domains = it.settings.domains - domain)) }
     }
 
     fun removeKeyword(keyword: String) {

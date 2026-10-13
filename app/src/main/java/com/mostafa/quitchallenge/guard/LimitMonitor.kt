@@ -27,7 +27,7 @@ object LimitMonitor {
         val breaks = mutableListOf<LimitBreak>()
 
         repo.data.value.challenges
-            .filter { it.type == ChallengeType.APP_LIMIT && it.isActive && !Logic.isGoalReached(it, now) }
+            .filter { it.type == ChallengeType.APP_LIMIT && Logic.hasStarted(it, now) && !Logic.isGoalReached(it, now) }
             .forEach { c ->
                 val from = Logic.usageWindowStart(c, now)
                 val used = UsageTracker.usageByPackage(context, c.trackedApps.map { it.packageName }.toSet(), from, now)

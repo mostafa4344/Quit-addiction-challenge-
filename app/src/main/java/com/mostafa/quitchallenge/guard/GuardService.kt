@@ -8,7 +8,10 @@ import android.provider.Settings
 import android.view.accessibility.AccessibilityEvent
 import com.mostafa.quitchallenge.data.AppGraph
 import com.mostafa.quitchallenge.data.ChallengeType
+import com.mostafa.quitchallenge.data.Logic
 import com.mostafa.quitchallenge.data.findKeyword
+import com.mostafa.quitchallenge.data.hostOf
+import com.mostafa.quitchallenge.data.matchDomain
 import com.mostafa.quitchallenge.data.formatDuration
 import com.mostafa.quitchallenge.data.formatMinutes
 import java.util.concurrent.Executors
@@ -24,6 +27,9 @@ class GuardService : AccessibilityService() {
     private var lastKeyword: String? = null
     private var lastKeywordAt = 0L
     private var lastAppPackage: String? = null
+    private var lastUrlCheck = 0L
+    private var lastBlockedHost: String? = null
+    private var lastBlockedAt = 0L
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return
@@ -35,6 +41,7 @@ class GuardService : AccessibilityService() {
                 maybePause(pkg)
             }
             AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> if (!event.isPassword) onTextTyped(event.text.joinToString(" "))
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> if (pkg in BROWSER_URL_BARS) checkBrowserUrl(pkg)
         }
     }
 
@@ -55,7 +62,7 @@ class GuardService : AccessibilityService() {
         val data = AppGraph.repo(this).data.value
         if (!data.settings.pauseBeforeOpen) return
         val limited = data.challenges.any { c ->
-            c.isActive && c.type == ChallengeType.APP_LIMIT && c.trackedApps.any { it.packageName == pkg }
+            Logic.hasStarted(c, now) && c.type == ChallengeType.APP_LIMIT && c.trackedApps.any { it.packageName == pkg }
         }
         if (limited) PauseActivity.show(this, pkg)
     }
@@ -87,6 +94,31 @@ class GuardService : AccessibilityService() {
         )
     }
 
+    /** Reads only the browser's address bar, to catch blocked sites opened from links, not just typed searches. */
+    private fun checkBrowserUrl(pkg: String) {
+        val now = System.currentTimeMillis()
+        if (now - lastUrlCheck < 1_000) return
+        lastUrlCheck = now
+        val settings = AppGraph.repo(this).data.value.settings
+        if (!settings.keywordGuard) return
+        val root = rootInActiveWindow ?: return
+        val text = BROWSER_URL_BARS[pkg].orEmpty().firstNotNullOfOrNull { id ->
+            root.findAccessibilityNodeInfosByViewId("$pkg:id/$id")?.firstOrNull()?.text?.toString()
+        } ?: return
+        val host = hostOf(text)
+        val blocked = host?.let { matchDomain(it, settings.domains) }
+        val label = blocked ?: findKeyword(text, settings.keywords) ?: return
+        if (label == lastBlockedHost && now - lastBlockedAt < 30_000) return
+        lastBlockedHost = label
+        lastBlockedAt = now
+        WarningActivity.show(
+            this,
+            title = "⚠️ Are you sure?",
+            message = "You have tried to open \"$label\".\n\nRemember why you started. Do you really want to continue?",
+            keyword = label,
+        )
+    }
+
     private fun onTextTyped(text: String) {
         val settings = AppGraph.repo(this).data.value.settings
         if (!settings.keywordGuard || text.isBlank()) return
@@ -111,6 +143,20 @@ class GuardService : AccessibilityService() {
     }
 
     companion object {
+        /** Address-bar view IDs of popular browsers. */
+        private val BROWSER_URL_BARS = mapOf(
+            "com.android.chrome" to listOf("url_bar"),
+            "com.chrome.beta" to listOf("url_bar"),
+            "com.brave.browser" to listOf("url_bar"),
+            "com.microsoft.emmx" to listOf("url_bar"),
+            "com.sec.android.app.sbrowser" to listOf("location_bar_edit_text"),
+            "org.mozilla.firefox" to listOf("mozac_browser_toolbar_url_view", "url_bar_title"),
+            "com.opera.browser" to listOf("url_field"),
+            "com.opera.mini.native" to listOf("url_field"),
+            "com.mi.globalbrowser" to listOf("url"),
+            "com.vivaldi.browser" to listOf("url_bar"),
+        )
+
         /** Our own screens and system overlays don't count as "leaving" an app. */
         private val IGNORED_PACKAGES = setOf("com.mostafa.quitchallenge", "com.android.systemui")
 

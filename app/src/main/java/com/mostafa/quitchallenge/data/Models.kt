@@ -105,6 +105,11 @@ data class UrgeLog(
 @Serializable
 data class OpenAttempt(val time: Long, val packageName: String, val skipped: Boolean)
 
+val DEFAULT_DOMAINS = listOf(
+    "pornhub.com", "xvideos.com", "xnxx.com", "xhamster.com", "redtube.com",
+    "youporn.com", "onlyfans.com", "spankbang.com", "chaturbate.com",
+)
+
 val DEFAULT_KEYWORDS = listOf("porn", "xxx", "nsfw", "nude", "sex video", "xvideos", "pornhub", "onlyfans")
 
 @Serializable
@@ -113,6 +118,8 @@ data class GuardSettings(
     /** Show a short breathing pause before a time-limited app opens. */
     val pauseBeforeOpen: Boolean = true,
     val keywords: List<String> = DEFAULT_KEYWORDS,
+    /** Websites that trigger the warning when opened in a browser (subdomains included). */
+    val domains: List<String> = DEFAULT_DOMAINS,
 )
 
 @Serializable
