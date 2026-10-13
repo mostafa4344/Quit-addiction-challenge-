@@ -14,6 +14,8 @@ class LimitWorker(context: Context, params: WorkerParameters) : Worker(context, 
     override fun doWork(): Result {
         LimitMonitor.check(applicationContext)
         ProtectionWatch.check(applicationContext)
+        MilestoneNotifier.check(applicationContext)
+        RiskReminder.check(applicationContext)
         // Keeps the home-screen widget's time fresh between app opens.
         ChallengeWidget.updateAll(applicationContext)
         return Result.success()

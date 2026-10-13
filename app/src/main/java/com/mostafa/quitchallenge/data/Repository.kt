@@ -35,6 +35,19 @@ class Repository(private val file: File, private val onChange: (AppData) -> Unit
         onChange(next)
     }
 
+    fun logOpenAttempt(packageName: String, skipped: Boolean, now: Long = System.currentTimeMillis()) {
+        val keepFrom = now - 30 * 24 * HOUR_MS
+        update { d ->
+            d.copy(openAttempts = d.openAttempts.filter { it.time >= keepFrom } + OpenAttempt(now, packageName, skipped))
+        }
+    }
+
+    fun setPlan(trigger: Trigger, plan: String) {
+        update { d ->
+            d.copy(plans = if (plan.isBlank()) d.plans - trigger else d.plans + (trigger to plan.trim()))
+        }
+    }
+
     fun exportJson(): String = json.encodeToString(AppData.serializer(), state.value)
 
     /** Replaces all data with a backup; returns false (and changes nothing) if the file isn't a valid backup. */
@@ -89,6 +102,7 @@ class Repository(private val file: File, private val onChange: (AppData) -> Unit
         note: String,
         source: UrgeSource = UrgeSource.MANUAL,
         resisted: Boolean = true,
+        intensityAfter: Int? = null,
     ) {
         val log = UrgeLog(
             id = UUID.randomUUID().toString(),
@@ -99,6 +113,7 @@ class Repository(private val file: File, private val onChange: (AppData) -> Unit
             note = note.trim(),
             source = source,
             resisted = resisted,
+            intensityAfter = intensityAfter,
         )
         update { it.copy(urges = it.urges + log) }
     }

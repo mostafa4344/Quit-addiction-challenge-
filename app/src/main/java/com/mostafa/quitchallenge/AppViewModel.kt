@@ -25,6 +25,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         type: ChallengeType,
         apps: List<TrackedApp>,
         dailyLimitMinutes: Int,
+        minutesPerDay: Int = 0,
+        moneyPerDay: Double = 0.0,
     ): String {
         val now = System.currentTimeMillis()
         val challenge = Challenge(
@@ -38,17 +40,30 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             type = type,
             trackedApps = if (type == ChallengeType.APP_LIMIT) apps else emptyList(),
             dailyLimitMinutes = dailyLimitMinutes,
+            minutesPerDay = minutesPerDay,
+            moneyPerDay = moneyPerDay,
         )
         repo.update { it.copy(challenges = it.challenges + challenge) }
         return challenge.id
     }
 
-    fun logUrge(challengeId: String, intensity: Int, triggers: List<Trigger>, note: String) =
-        repo.logUrge(challengeId, intensity, triggers, note)
+    fun logUrge(challengeId: String, intensity: Int, triggers: List<Trigger>, note: String, intensityAfter: Int? = null) =
+        repo.logUrge(challengeId, intensity, triggers, note, intensityAfter = intensityAfter)
+
+    fun setPlan(trigger: Trigger, plan: String) = repo.setPlan(trigger, plan)
+
+    fun setPauseBeforeOpen(enabled: Boolean) {
+        repo.update { it.copy(settings = it.settings.copy(pauseBeforeOpen = enabled)) }
+    }
 
     fun relapse(challengeId: String, triggers: List<Trigger>, note: String, warningSigns: String, plan: String) {
         val now = System.currentTimeMillis()
         repo.relapse(challengeId, triggers, note, now, warningSigns, plan)
+        // A plan written right after a slip becomes the standing plan for those pressures, unless one exists.
+        if (plan.isNotBlank()) {
+            val existing = repo.data.value.plans
+            triggers.filter { it !in existing }.forEach { repo.setPlan(it, plan) }
+        }
         SupportWorker.scheduleAfterSlip(getApplication(), challengeId, now)
     }
 

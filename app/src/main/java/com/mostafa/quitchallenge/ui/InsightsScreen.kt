@@ -23,12 +23,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.mostafa.quitchallenge.AppViewModel
 import com.mostafa.quitchallenge.data.AppData
+import com.mostafa.quitchallenge.data.Trigger
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.mostafa.quitchallenge.data.computeInsights
 import com.mostafa.quitchallenge.data.formatDuration
 
 @Composable
-fun InsightsScreen(data: AppData) {
+fun InsightsScreen(data: AppData, vm: AppViewModel) {
     val now = rememberNow(60_000L)
     val insights = computeInsights(data, now)
 
@@ -51,6 +64,8 @@ fun InsightsScreen(data: AppData) {
                 StatBox("Keyword alerts", "${insights.keywordAlerts}", Modifier.weight(1f))
                 StatBox("Total clean time", formatDuration(insights.totalCleanMs), Modifier.weight(1f))
             }
+
+            PlansSection(data, insights.triggerCounts.take(3).map { it.first }, vm)
 
             if (!insights.hasData) {
                 Column(
@@ -89,21 +104,95 @@ fun InsightsScreen(data: AppData) {
                 )
             }
 
-            val top = insights.triggerCounts.take(3)
-            if (top.isNotEmpty()) {
-                SectionTitle("📝 Your plan")
-                top.forEach { (t, _) ->
-                    Card(
-                        Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    ) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text("${t.emoji} When you feel ${t.label.lowercase()}", fontWeight = FontWeight.Bold)
-                            Text(t.tip, Modifier.padding(top = 4.dp))
-                        }
-                    }
+        }
+    }
+}
+
+/**
+ * The user's own if-then plans. Research on implementation intentions shows that
+ * "if X happens, then I will Y" plans work best when they're the person's own and get rehearsed.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PlansSection(data: AppData, topTriggers: List<Trigger>, vm: AppViewModel) {
+    var editing by remember { mutableStateOf<Trigger?>(null) }
+    var picking by remember { mutableStateOf(false) }
+    val shown = (topTriggers + data.plans.keys).distinct()
+
+    SectionTitle("📝 My if-then plans")
+    Text(
+        "Decide in advance what you'll do when a pressure hits. Your plans show up in SOS mode and before your risky time of day.",
+        style = MaterialTheme.typography.bodySmall,
+    )
+    shown.forEach { t ->
+        val plan = data.plans[t]
+        Card(
+            Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = if (plan != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("${t.emoji} If I feel ${t.label.lowercase()}…", fontWeight = FontWeight.Bold)
+                if (plan != null) {
+                    Text("…then I will $plan")
+                } else {
+                    Text("Idea: ${t.tip}", style = MaterialTheme.typography.bodySmall)
                 }
+                TextButton(onClick = { editing = t }) { Text(if (plan != null) "Edit plan" else "Write my plan") }
             }
         }
+    }
+    OutlinedButton(onClick = { picking = true }) { Text("➕ Add a plan for another pressure") }
+
+    if (picking) {
+        AlertDialog(
+            onDismissRequest = { picking = false },
+            title = { Text("Which pressure?") },
+            text = {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Trigger.entries.forEach { t ->
+                        FilterChip(
+                            selected = false,
+                            onClick = {
+                                picking = false
+                                editing = t
+                            },
+                            label = { Text("${t.emoji} ${t.label}") },
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } },
+        )
+    }
+
+    editing?.let { t ->
+        var text by remember(t) { mutableStateOf(data.plans[t].orEmpty()) }
+        AlertDialog(
+            onDismissRequest = { editing = null },
+            title = { Text("${t.emoji} If I feel ${t.label.lowercase()}…") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = { text = it.take(200) },
+                        label = { Text("…then I will") },
+                        placeholder = { Text(t.tip) },
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text("Make it specific: what, where, for how long.", style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.setPlan(t, text)
+                    editing = null
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { editing = null }) { Text("Cancel") } },
+        )
     }
 }

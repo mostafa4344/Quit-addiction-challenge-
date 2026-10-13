@@ -37,6 +37,8 @@ import com.mostafa.quitchallenge.data.dailyQuote
 import com.mostafa.quitchallenge.data.formatDuration
 import com.mostafa.quitchallenge.data.formatGoal
 import com.mostafa.quitchallenge.data.formatMinutes
+import com.mostafa.quitchallenge.data.formatMoney
+import com.mostafa.quitchallenge.data.MINUTE_MS
 
 @Composable
 fun HomeScreen(data: AppData, onOpen: (String) -> Unit, onNew: () -> Unit) {
@@ -137,6 +139,13 @@ private fun ChallengeCard(c: Challenge, now: Long, onClick: () -> Unit) {
                         "Goal: ${formatGoal(c.goalHours)} • ${(progress * 100).toInt()}%",
                         style = MaterialTheme.typography.bodySmall,
                     )
+                    if (c.minutesPerDay > 0 || c.moneyPerDay > 0) {
+                        val parts = buildList {
+                            if (c.minutesPerDay > 0) add("⏳ ${formatDuration(Logic.savedMinutes(c, now) * MINUTE_MS)} won back")
+                            if (c.moneyPerDay > 0) add("💰 ${formatMoney(Logic.savedMoney(c, now), c.currency)} saved")
+                        }
+                        Text(parts.joinToString(" • "), style = MaterialTheme.typography.bodySmall)
+                    }
                     if (c.attempts.isNotEmpty()) {
                         Text(
                             "Total clean: ${formatDuration(Logic.totalCleanMs(c, now))} • Best: ${formatDuration(Logic.bestStreakMs(c, now))}",

@@ -51,9 +51,13 @@ import androidx.compose.ui.unit.dp
 import com.mostafa.quitchallenge.AppViewModel
 import com.mostafa.quitchallenge.data.AttemptResult
 import com.mostafa.quitchallenge.data.Challenge
+import com.mostafa.quitchallenge.data.OpenAttempt
+import androidx.compose.runtime.collectAsState
 import com.mostafa.quitchallenge.data.ChallengeType
 import com.mostafa.quitchallenge.data.MINUTE_MS
 import com.mostafa.quitchallenge.data.formatMinutes
+import com.mostafa.quitchallenge.data.formatMoney
+import com.mostafa.quitchallenge.data.openStats
 import com.mostafa.quitchallenge.guard.UsageTracker
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.ui.platform.LocalContext
@@ -74,14 +78,13 @@ private fun tipsFor(triggers: List<Trigger>): String =
     triggers.joinToString("\n\n") { "${it.emoji} ${it.label}: ${it.tip}" }
 
 @Composable
-fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, onBack: () -> Unit) {
+fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, onBack: () -> Unit, onSos: () -> Unit) {
     val c = challenge
     val now = rememberNow()
     val elapsed = Logic.elapsedMs(c, now)
     val progress = Logic.progress(c, now)
     val goalReached = Logic.isGoalReached(c, now)
 
-    var showUrge by remember { mutableStateOf(false) }
     var showRelapse by remember { mutableStateOf(false) }
     var showDelete by remember { mutableStateOf(false) }
     var support by remember { mutableStateOf<SupportMessage?>(null) }
@@ -137,7 +140,7 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                 }
             }
 
-            if (c.type == ChallengeType.APP_LIMIT && c.isActive) AppUsageCard(c)
+            if (c.type == ChallengeType.APP_LIMIT && c.isActive) AppUsageCard(c, vm.data.collectAsState().value.openAttempts)
 
             when {
                 goalReached -> GoalReachedCard(c, onLevelUp = { vm.completeGoal(c.id, levelUp = true) }, onFinish = {
@@ -157,8 +160,8 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(onClick = { showUrge = true }, modifier = Modifier.weight(1f)) {
-                            Text("⚡ I feel an urge")
+                        Button(onClick = onSos, modifier = Modifier.weight(1f)) {
+                            Text("🆘 I feel an urge")
                         }
                         OutlinedButton(
                             onClick = { showRelapse = true },
@@ -194,6 +197,16 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                 val (clean, counted) = Logic.cleanDaysInLast30(c, now)
                 StatBox("Slip-free days (last 30)", "$clean / $counted", Modifier.weight(1f))
                 StatBox("Urges beaten", "${urges.count { it.resisted }}", Modifier.weight(1f))
+            }
+            if (c.minutesPerDay > 0 || c.moneyPerDay > 0) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (c.minutesPerDay > 0) {
+                        StatBox("Time won back", formatDuration(Logic.savedMinutes(c, now) * MINUTE_MS), Modifier.weight(1f))
+                    }
+                    if (c.moneyPerDay > 0) {
+                        StatBox("Money saved", formatMoney(Logic.savedMoney(c, now), c.currency), Modifier.weight(1f))
+                    }
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatBox("Current attempt", "#${c.attemptNumber}", Modifier.weight(1f))
@@ -233,24 +246,6 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                 }
             }
         }
-    }
-
-    if (showUrge) {
-        UrgeDialog(
-            onDismiss = { showUrge = false },
-            onSave = { intensity, triggers, note ->
-                vm.logUrge(c.id, intensity, triggers, note)
-                showUrge = false
-                support = SupportMessage(
-                    "You can do this! 💪",
-                    buildString {
-                        append("An urge usually fades within 15–20 minutes. Just get through that time: drink some water, change your location.")
-                        if (c.why.isNotBlank()) append("\n\nRemember why you started:\n\"${c.why}\"")
-                        if (triggers.isNotEmpty()) append("\n\n").append(tipsFor(triggers))
-                    },
-                )
-            },
-        )
     }
 
     if (showRelapse) {
@@ -345,35 +340,6 @@ private fun MilestoneSection(c: Challenge, elapsed: Long) {
 }
 
 @Composable
-private fun UrgeDialog(onDismiss: () -> Unit, onSave: (Int, List<Trigger>, String) -> Unit) {
-    var intensity by remember { mutableFloatStateOf(3f) }
-    var triggers by remember { mutableStateOf(emptyList<Trigger>()) }
-    var note by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("⚡ Feeling an urge?") },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("How strong is it? ${intensity.toInt()}/5")
-                Slider(value = intensity, onValueChange = { intensity = it }, valueRange = 1f..5f, steps = 3)
-                Text("What pressure is it coming from?")
-                TriggerPicker(triggers) { triggers = it }
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = { note = it.take(200) },
-                    label = { Text("Note (optional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(intensity.toInt(), triggers, note) }) { Text("Log it, I'll handle it") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
-}
-
-@Composable
 private fun RelapseDialog(onDismiss: () -> Unit, onConfirm: (List<Trigger>, String, String, String) -> Unit) {
     var triggers by remember { mutableStateOf(emptyList<Trigger>()) }
     var note by remember { mutableStateOf("") }
@@ -422,7 +388,7 @@ private fun RelapseDialog(onDismiss: () -> Unit, onConfirm: (List<Trigger>, Stri
 }
 
 @Composable
-private fun AppUsageCard(c: Challenge) {
+private fun AppUsageCard(c: Challenge, vmOpenAttempts: List<OpenAttempt>) {
     val context = LocalContext.current
     val usage by rememberTodayUsage(c)
     val used = usage.values.sum()
@@ -445,6 +411,14 @@ private fun AppUsageCard(c: Challenge) {
             )
             c.trackedApps.forEach { app ->
                 Text("• ${app.label}: ${formatDuration(usage[app.packageName] ?: 0L)}", style = MaterialTheme.typography.bodySmall)
+            }
+            val (opened, skipped) = openStats(
+                vmOpenAttempts,
+                c.trackedApps.map { it.packageName }.toSet(),
+                Logic.usageWindowStart(c, System.currentTimeMillis()),
+            )
+            if (opened > 0) {
+                Text("🚪 Opened $opened times today, skipped $skipped at the pause screen", style = MaterialTheme.typography.bodySmall)
             }
             Text(
                 "Cross the limit and this challenge restarts automatically.",

@@ -69,6 +69,19 @@ fun ProtectionScreen(data: AppData, vm: AppViewModel) {
 
             PermissionsList()
 
+            Card(Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("⏸ Pause before opening limited apps", fontWeight = FontWeight.Bold)
+                        Text(
+                            "When you open an app from an app-limit challenge, take one breath first and choose: close it or open it. Needs step 3.",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    Switch(checked = data.settings.pauseBeforeOpen, onCheckedChange = { vm.setPauseBeforeOpen(it) })
+                }
+            }
+
             AppLockCard()
 
             Card(Modifier.fillMaxWidth()) {

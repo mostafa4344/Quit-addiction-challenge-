@@ -10,6 +10,8 @@ import com.mostafa.quitchallenge.data.DayPart
 import com.mostafa.quitchallenge.data.HOUR_MS
 import com.mostafa.quitchallenge.data.Logic
 import com.mostafa.quitchallenge.data.MINUTE_MS
+import com.mostafa.quitchallenge.data.OpenAttempt
+import com.mostafa.quitchallenge.data.openStats
 import com.mostafa.quitchallenge.data.Trigger
 import com.mostafa.quitchallenge.data.UrgeLog
 import com.mostafa.quitchallenge.data.UrgeSource
@@ -97,6 +99,32 @@ class LogicTest {
         assertEquals(4 to 6, Logic.cleanDaysInLast30(c, 5 * day + HOUR_MS, ZoneOffset.UTC))
         // Only the last 30 days count once the challenge is older than that.
         assertEquals(30 to 30, Logic.cleanDaysInLast30(c, 100 * day, ZoneOffset.UTC))
+    }
+
+    @Test
+    fun levelLadderUsesRealisticSteps() {
+        assertEquals(72, Logic.nextLevelGoal(24))
+        assertEquals(168, Logic.nextLevelGoal(72))
+        assertEquals(336, Logic.nextLevelGoal(200))
+        assertEquals(8760 * 2, Logic.nextLevelGoal(8760))
+    }
+
+    @Test
+    fun savingsFollowTotalCleanTime() {
+        val c = challenge(start = 0).copy(minutesPerDay = 60, moneyPerDay = 100.0)
+        assertEquals(36 * 60L, Logic.savedMinutes(c, 36 * 24 * HOUR_MS))
+        assertEquals(150.0, Logic.savedMoney(c, 36 * HOUR_MS), 0.001)
+    }
+
+    @Test
+    fun openStatsCountTodayOnly() {
+        val attempts = listOf(
+            OpenAttempt(5, "fb", skipped = true),
+            OpenAttempt(50, "fb", skipped = false),
+            OpenAttempt(60, "fb", skipped = true),
+            OpenAttempt(70, "yt", skipped = true),
+        )
+        assertEquals(2 to 1, openStats(attempts, setOf("fb"), from = 10))
     }
 
     @Test

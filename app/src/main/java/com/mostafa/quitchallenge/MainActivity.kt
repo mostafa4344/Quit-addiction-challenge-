@@ -1,5 +1,6 @@
 package com.mostafa.quitchallenge
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
@@ -39,6 +40,7 @@ import com.mostafa.quitchallenge.ui.NewChallengeScreen
 import com.mostafa.quitchallenge.ui.Onboarding
 import com.mostafa.quitchallenge.ui.OnboardingScreen
 import com.mostafa.quitchallenge.ui.ProtectionScreen
+import com.mostafa.quitchallenge.ui.SosScreen
 import com.mostafa.quitchallenge.ui.theme.QuitTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -46,6 +48,9 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : FragmentActivity() {
     private var locked by mutableStateOf(false)
+
+    /** A screen another part of the app asked to open (e.g. SOS from the warning screen). */
+    private var requestedRoute by mutableStateOf<String?>(null)
     private var backgroundedAt = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,11 +58,29 @@ class MainActivity : FragmentActivity() {
         Notifier.createChannel(this)
         LimitWorker.schedule(this)
         locked = AppLock.isEnabled(this) && savedInstanceState?.getBoolean(KEY_UNLOCKED) != true
+        if (savedInstanceState == null) requestedRoute = routeFrom(intent)
         setContent {
             QuitTheme {
-                if (locked) LockScreen(onUnlocked = { locked = false }) else App()
+                if (locked) {
+                    LockScreen(onUnlocked = { locked = false })
+                } else {
+                    App(requestedRoute = requestedRoute, onRouteConsumed = { requestedRoute = null })
+                }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        routeFrom(intent)?.let { requestedRoute = it }
+    }
+
+    private fun routeFrom(intent: Intent?): String? =
+        if (intent?.getBooleanExtra(EXTRA_OPEN_SOS, false) == true) SOS + intent.getStringExtra(EXTRA_CHALLENGE_ID).orEmpty() else null
+
+    companion object {
+        const val EXTRA_OPEN_SOS = "open_sos"
+        const val EXTRA_CHALLENGE_ID = "challenge_id"
     }
 
     override fun onStart() {
@@ -88,9 +111,10 @@ private const val INSIGHTS = "insights"
 private const val PROTECT = "protect"
 private const val NEW = "new"
 private const val DETAIL = "detail:"
+private const val SOS = "sos:"
 
 @Composable
-fun App(vm: AppViewModel = viewModel()) {
+fun App(requestedRoute: String? = null, onRouteConsumed: () -> Unit = {}, vm: AppViewModel = viewModel()) {
     val data by vm.data.collectAsStateWithLifecycle()
     var route by rememberSaveable { mutableStateOf(HOME) }
     val isTab = route == HOME || route == INSIGHTS || route == PROTECT
@@ -111,6 +135,13 @@ fun App(vm: AppViewModel = viewModel()) {
             onboarded = true
         })
         return
+    }
+
+    LaunchedEffect(requestedRoute) {
+        if (requestedRoute != null) {
+            route = requestedRoute
+            onRouteConsumed()
+        }
     }
 
     BackHandler(enabled = route != HOME) { route = HOME }
@@ -148,14 +179,18 @@ fun App(vm: AppViewModel = viewModel()) {
                     onOpen = { route = DETAIL + it },
                     onNew = { route = NEW },
                 )
-                route == INSIGHTS -> InsightsScreen(data)
+                route == INSIGHTS -> InsightsScreen(data, vm)
                 route == PROTECT -> ProtectionScreen(data, vm)
                 route == NEW -> NewChallengeScreen(
                     onBack = { route = HOME },
-                    onCreate = { name, category, goalHours, why, type, apps, limit ->
-                        route = DETAIL + vm.createChallenge(name, category, goalHours, why, type, apps, limit)
+                    onCreate = { name, category, goalHours, why, type, apps, limit, minutes, money ->
+                        route = DETAIL + vm.createChallenge(name, category, goalHours, why, type, apps, limit, minutes, money)
                     },
                 )
+                route.startsWith(SOS) -> {
+                    val id = route.removePrefix(SOS).ifEmpty { null }
+                    SosScreen(id, data, vm, onClose = { route = if (id != null) DETAIL + id else HOME })
+                }
                 route.startsWith(DETAIL) -> {
                     val id = route.removePrefix(DETAIL)
                     val challenge = data.challenges.find { it.id == id }
@@ -167,6 +202,7 @@ fun App(vm: AppViewModel = viewModel()) {
                             urges = data.urges.filter { it.challengeId == id },
                             vm = vm,
                             onBack = { route = HOME },
+                            onSos = { route = SOS + id },
                         )
                     }
                 }

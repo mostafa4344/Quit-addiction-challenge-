@@ -72,6 +72,8 @@ fun NewChallengeScreen(
         type: ChallengeType,
         apps: List<TrackedApp>,
         dailyLimitMinutes: Int,
+        minutesPerDay: Int,
+        moneyPerDay: Double,
     ) -> Unit,
 ) {
     var type by rememberSaveable { mutableStateOf(ChallengeType.TIMER) }
@@ -82,6 +84,8 @@ fun NewChallengeScreen(
     var why by rememberSaveable { mutableStateOf("") }
     var limit by rememberSaveable { mutableStateOf("30") }
     var apps by remember { mutableStateOf(emptyList<TrackedApp>()) }
+    var costMinutes by rememberSaveable { mutableStateOf("") }
+    var costMoney by rememberSaveable { mutableStateOf("") }
     var showPicker by remember { mutableStateOf(false) }
 
     val isAppLimit = type == ChallengeType.APP_LIMIT
@@ -235,11 +239,47 @@ fun NewChallengeScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            SectionTitle("What did it cost you per day? (optional)")
+            Text(
+                "Used to show how much time and money you win back.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = costMinutes,
+                    onValueChange = { costMinutes = it.filter(Char::isDigit).take(4) },
+                    label = { Text("Minutes / day") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedTextField(
+                    value = costMoney,
+                    onValueChange = { v -> costMoney = v.filter { it.isDigit() || it == '.' }.take(8) },
+                    label = { Text("Money / day (৳)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
             if (isAppLimit && apps.isEmpty()) {
                 Text("Choose at least one app to track.", color = MaterialTheme.colorScheme.error)
             }
             Button(
-                onClick = { onCreate(name.ifBlank { defaultName }, category, goalHours, why, type, apps, limitMinutes) },
+                onClick = {
+                    onCreate(
+                        name.ifBlank { defaultName },
+                        category,
+                        goalHours,
+                        why,
+                        type,
+                        apps,
+                        limitMinutes,
+                        costMinutes.toIntOrNull() ?: 0,
+                        costMoney.toDoubleOrNull() ?: 0.0,
+                    )
+                },
                 enabled = valid,
                 modifier = Modifier.fillMaxWidth(),
             ) {

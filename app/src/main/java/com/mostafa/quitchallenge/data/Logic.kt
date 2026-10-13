@@ -72,8 +72,15 @@ object Logic {
     fun bestStreakMs(c: Challenge, now: Long): Long =
         maxOf(c.attempts.maxOfOrNull { it.durationMs } ?: 0L, elapsedMs(c, now))
 
-    /** Each completed level doubles the goal, so the challenge keeps growing. */
-    fun nextLevelGoal(goalHours: Int): Int = goalHours * 2
+    private val LEVEL_LADDER_HOURS = listOf(24, 72, 168, 336, 504, 720, 1440, 2160, 4320, 8760)
+
+    /** Each completed level moves to the next realistic step (1, 3, 7, 14, 21, 30, 60, 90, 180, 365 days). */
+    fun nextLevelGoal(goalHours: Int): Int = LEVEL_LADDER_HOURS.firstOrNull { it > goalHours } ?: (goalHours * 2)
+
+    /** Time and money not spent on the habit, based on the user's own per-day estimate. */
+    fun savedMinutes(c: Challenge, now: Long): Long = totalCleanMs(c, now) * c.minutesPerDay / (24 * HOUR_MS)
+
+    fun savedMoney(c: Challenge, now: Long): Double = totalCleanMs(c, now).toDouble() / (24 * HOUR_MS) * c.moneyPerDay
 
     /**
      * Today's usage counts only from the later of midnight and the attempt start,
@@ -234,3 +241,12 @@ private val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a", 
 
 fun formatDate(ms: Long, zone: ZoneId = ZoneId.systemDefault()): String =
     Instant.ofEpochMilli(ms).atZone(zone).format(dateFormatter)
+
+fun formatMoney(amount: Double, currency: String): String =
+    if (amount >= 100) "$currency${amount.toLong()}" else "$currency${"%.2f".format(Locale.ENGLISH, amount)}"
+
+/** Today's open attempts for a set of apps: (opened, skipped). */
+fun openStats(attempts: List<OpenAttempt>, packages: Set<String>, from: Long): Pair<Int, Int> {
+    val today = attempts.filter { it.time >= from && it.packageName in packages }
+    return today.size to today.count { it.skipped }
+}

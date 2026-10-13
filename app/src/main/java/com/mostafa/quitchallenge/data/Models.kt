@@ -72,6 +72,10 @@ data class Challenge(
     val type: ChallengeType = ChallengeType.TIMER,
     val trackedApps: List<TrackedApp> = emptyList(),
     val dailyLimitMinutes: Int = 0,
+    /** What the habit used to cost per day, for the "saved" counters. 0 = not set. */
+    val minutesPerDay: Int = 0,
+    val moneyPerDay: Double = 0.0,
+    val currency: String = "৳",
 ) {
     val isActive: Boolean get() = currentStart != null
     val attemptNumber: Int get() = attempts.size + 1
@@ -93,13 +97,21 @@ data class UrgeLog(
     val note: String = "",
     val source: UrgeSource = UrgeSource.MANUAL,
     val resisted: Boolean = true,
+    /** Strength after an SOS session, to show the user that urges fade. */
+    val intensityAfter: Int? = null,
 )
+
+/** One attempt to open a limited app, caught by the pause screen. */
+@Serializable
+data class OpenAttempt(val time: Long, val packageName: String, val skipped: Boolean)
 
 val DEFAULT_KEYWORDS = listOf("porn", "xxx", "nsfw", "nude", "sex video", "xvideos", "pornhub", "onlyfans")
 
 @Serializable
 data class GuardSettings(
     val keywordGuard: Boolean = true,
+    /** Show a short breathing pause before a time-limited app opens. */
+    val pauseBeforeOpen: Boolean = true,
     val keywords: List<String> = DEFAULT_KEYWORDS,
 )
 
@@ -108,4 +120,7 @@ data class AppData(
     val challenges: List<Challenge> = emptyList(),
     val urges: List<UrgeLog> = emptyList(),
     val settings: GuardSettings = GuardSettings(),
+    /** The user's own "if this pressure hits, then I will…" plans. */
+    val plans: Map<Trigger, String> = emptyMap(),
+    val openAttempts: List<OpenAttempt> = emptyList(),
 )

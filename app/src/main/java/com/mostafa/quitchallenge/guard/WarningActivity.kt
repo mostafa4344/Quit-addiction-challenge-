@@ -55,7 +55,10 @@ class WarningActivity : ComponentActivity() {
                         Button(onClick = { goBack(keyword) }, modifier = Modifier.fillMaxWidth()) {
                             Text("💪 Go back, stay strong")
                         }
-                        OutlinedButton(onClick = { proceed(keyword) }, modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(onClick = { openSos(keyword) }, modifier = Modifier.fillMaxWidth()) {
+                            Text("🆘 Help me ride out this urge")
+                        }
+                        androidx.compose.material3.TextButton(onClick = { proceed(keyword) }, modifier = Modifier.fillMaxWidth()) {
                             Text("Continue anyway")
                         }
                     }
@@ -69,6 +72,18 @@ class WarningActivity : ComponentActivity() {
             AppGraph.repo(this).logUrge("", 3, emptyList(), "Searched: $keyword", UrgeSource.KEYWORD, resisted = true)
         }
         startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        finish()
+    }
+
+    private fun openSos(keyword: String?) {
+        if (keyword != null) {
+            AppGraph.repo(this).logUrge("", 3, emptyList(), "Searched: $keyword", UrgeSource.KEYWORD, resisted = true)
+        }
+        startActivity(
+            Intent(this, com.mostafa.quitchallenge.MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtra(com.mostafa.quitchallenge.MainActivity.EXTRA_OPEN_SOS, true),
+        )
         finish()
     }
 
