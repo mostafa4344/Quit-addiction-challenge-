@@ -42,8 +42,8 @@ fun InsightsScreen(data: AppData) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatBox("Completed", "${insights.completions}", Modifier.weight(1f))
-                StatBox("Failed", "${insights.failures}", Modifier.weight(1f))
+                StatBox("Goals reached", "${insights.completions}", Modifier.weight(1f))
+                StatBox("Slips", "${insights.failures}", Modifier.weight(1f))
                 StatBox("Success rate", "${insights.successRate}%", Modifier.weight(1f))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

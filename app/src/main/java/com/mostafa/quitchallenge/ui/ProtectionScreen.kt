@@ -2,8 +2,6 @@
 
 package com.mostafa.quitchallenge.ui
 
-import android.Manifest
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -16,9 +14,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
@@ -27,12 +25,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,19 +40,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mostafa.quitchallenge.AppViewModel
 import com.mostafa.quitchallenge.data.AppData
+import com.mostafa.quitchallenge.data.AppGraph
 import com.mostafa.quitchallenge.guard.GuardService
-import com.mostafa.quitchallenge.guard.Notifier
-import com.mostafa.quitchallenge.guard.UsageTracker
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.LocalDate
 
 @Composable
 fun ProtectionScreen(data: AppData, vm: AppViewModel) {
     val context = LocalContext.current
-    // Re-read permission states regularly so they update after returning from system settings.
-    val now = rememberNow(2_000L)
-    val usageOk = key(now) { UsageTracker.hasUsageAccess(context) }
-    val guardOk = key(now) { GuardService.isEnabled(context) }
-    val notifyOk = key(now) { Notifier.canPost(context) }
-    val notifyLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    val guardOk = GuardService.isEnabled(context)
     var newKeyword by remember { mutableStateOf("") }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Protection 🛡") }) }) { padding ->
@@ -66,34 +63,11 @@ fun ProtectionScreen(data: AppData, vm: AppViewModel) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                "Give these permissions so the app can track your app time, send break reminders and warn you before you search for something you're trying to quit.",
+                "Turn these on so the app can track your app time, send break reminders and warn you before you search for something you're trying to quit.",
                 style = MaterialTheme.typography.bodyMedium,
             )
 
-            PermissionCard(
-                title = "📲 Usage access",
-                description = "Measures how long you use each app (the same data Digital Wellbeing uses). Needed for app time-limit challenges.",
-                granted = usageOk,
-                onGrant = { context.startActivity(UsageTracker.usageAccessSettingsIntent()) },
-            )
-            PermissionCard(
-                title = "🔔 Notifications",
-                description = "Break reminders when you're close to your limit, and alerts when a challenge restarts.",
-                granted = notifyOk,
-                onGrant = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        notifyLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                },
-            )
-            PermissionCard(
-                title = "🛡 Accessibility (Guard)",
-                description = "Shows an \"Are you sure?\" screen when you type a blocked keyword, and stops you the moment an app crosses its time limit. " +
-                    "In settings, open \"Installed apps\" or \"Downloaded apps\", choose \"Quit Challenge Guard\" and turn it on. " +
-                    "Everything is checked on your phone only; typed text is never saved or sent anywhere.",
-                granted = guardOk,
-                onGrant = { context.startActivity(GuardService.settingsIntent()) },
-            )
+            PermissionsList()
 
             AppLockCard()
 
@@ -111,7 +85,7 @@ fun ProtectionScreen(data: AppData, vm: AppViewModel) {
                     }
                     if (!guardOk) {
                         Text(
-                            "Turn on the Accessibility permission above for the keyword guard to work.",
+                            "Turn on step 3 (Accessibility) above for the keyword guard to work.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -139,27 +113,79 @@ fun ProtectionScreen(data: AppData, vm: AppViewModel) {
                     }
                 }
             }
+
+            BackupCard()
         }
     }
 }
 
+/** Export / import all data as a JSON file, so nothing is lost when changing phones. */
 @Composable
-private fun PermissionCard(title: String, description: String, granted: Boolean, onGrant: () -> Unit) {
-    Card(
-        Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (granted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text(if (granted) "✅ On" else "❌ Off", fontWeight = FontWeight.Bold)
-            }
-            Text(description, style = MaterialTheme.typography.bodySmall)
-            if (!granted) {
-                OutlinedButton(onClick = onGrant) { Text("Turn on") }
+private fun BackupCard() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var message by remember { mutableStateOf<String?>(null) }
+    var pendingImport by remember { mutableStateOf<String?>(null) }
+
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            message = withContext(Dispatchers.IO) {
+                try {
+                    val text = AppGraph.repo(context).exportJson()
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
+                        ?: error("Can't open file")
+                    "✅ Backup saved."
+                } catch (e: Exception) {
+                    "❌ Couldn't save the backup: ${e.message}"
+                }
             }
         }
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val text = withContext(Dispatchers.IO) {
+                try {
+                    context.contentResolver.openInputStream(uri)?.use { it.readBytes().decodeToString() }
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            if (text == null) message = "❌ Couldn't read that file." else pendingImport = text
+        }
+    }
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("💾 Backup", fontWeight = FontWeight.Bold)
+            Text(
+                "Your data lives only on this phone. Save a backup file (for example to Google Drive) to keep it when you change phones or reinstall.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { exportLauncher.launch("quit-challenge-backup-${LocalDate.now()}.json") }) { Text("Save backup") }
+                OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "text/plain")) }) {
+                    Text("Restore")
+                }
+            }
+            message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+        }
+    }
+
+    pendingImport?.let { text ->
+        AlertDialog(
+            onDismissRequest = { pendingImport = null },
+            title = { Text("Restore this backup?") },
+            text = { Text("All current challenges, logs and settings on this phone will be replaced by the backup.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingImport = null
+                    val ok = AppGraph.repo(context).importJson(text)
+                    message = if (ok) "✅ Backup restored." else "❌ That file isn't a Quit Challenge backup."
+                }) { Text("Restore", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { pendingImport = null }) { Text("Cancel") } },
+        )
     }
 }

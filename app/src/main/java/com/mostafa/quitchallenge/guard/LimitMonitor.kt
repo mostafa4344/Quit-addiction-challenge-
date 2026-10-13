@@ -44,6 +44,7 @@ object LimitMonitor {
                         "You used $apps for ${formatDuration(used)} today (limit ${formatMinutes(c.dailyLimitMinutes)}). " +
                             "The challenge restarts now. Close the app and take a break, you can do this! 💪",
                     )
+                    SupportWorker.scheduleAfterSlip(context, c.id, now)
                     breaks += LimitBreak(c, used)
                 } else if (limitMs > 0 && used >= limitMs * 8 / 10) {
                     val key = "warn_${c.id}_$from"

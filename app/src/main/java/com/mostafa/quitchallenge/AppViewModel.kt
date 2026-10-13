@@ -9,6 +9,7 @@ import com.mostafa.quitchallenge.data.Challenge
 import com.mostafa.quitchallenge.data.ChallengeType
 import com.mostafa.quitchallenge.data.TrackedApp
 import com.mostafa.quitchallenge.data.Trigger
+import com.mostafa.quitchallenge.guard.SupportWorker
 import kotlinx.coroutines.flow.StateFlow
 import java.util.UUID
 
@@ -45,7 +46,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun logUrge(challengeId: String, intensity: Int, triggers: List<Trigger>, note: String) =
         repo.logUrge(challengeId, intensity, triggers, note)
 
-    fun relapse(challengeId: String, triggers: List<Trigger>, note: String) = repo.relapse(challengeId, triggers, note)
+    fun relapse(challengeId: String, triggers: List<Trigger>, note: String, warningSigns: String, plan: String) {
+        val now = System.currentTimeMillis()
+        repo.relapse(challengeId, triggers, note, now, warningSigns, plan)
+        SupportWorker.scheduleAfterSlip(getApplication(), challengeId, now)
+    }
 
     fun completeGoal(challengeId: String, levelUp: Boolean) = repo.completeGoal(challengeId, levelUp)
 

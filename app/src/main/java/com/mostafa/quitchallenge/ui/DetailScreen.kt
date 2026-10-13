@@ -165,7 +165,7 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         ) {
-                            Text("❌ I failed")
+                            Text("🌊 I slipped")
                         }
                     }
                 }
@@ -187,21 +187,31 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
 
             SectionTitle("📊 Stats")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatBox("Current attempt", "#${c.attemptNumber}", Modifier.weight(1f))
-                StatBox("Completed", "${c.completions}", Modifier.weight(1f))
-                StatBox("Failed", "${c.failures}", Modifier.weight(1f))
+                StatBox("Total clean time", formatDuration(Logic.totalCleanMs(c, now)), Modifier.weight(1f))
+                StatBox("Best streak", formatDuration(Logic.bestStreakMs(c, now)), Modifier.weight(1f))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatBox("Best streak", formatDuration(Logic.bestStreakMs(c, now)), Modifier.weight(1f))
+                val (clean, counted) = Logic.cleanDaysInLast30(c, now)
+                StatBox("Slip-free days (last 30)", "$clean / $counted", Modifier.weight(1f))
                 StatBox("Urges beaten", "${urges.count { it.resisted }}", Modifier.weight(1f))
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatBox("Current attempt", "#${c.attemptNumber}", Modifier.weight(1f))
+                StatBox("Goals reached", "${c.completions}", Modifier.weight(1f))
+                StatBox("Slips", "${c.failures}", Modifier.weight(1f))
+            }
+            Text(
+                "A slip only restarts the current streak. Your total clean time and best streak always stay.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             if (c.attempts.isNotEmpty()) {
                 SectionTitle("🗂 Previous attempts")
                 c.attempts.withIndex().reversed().forEach { (i, a) ->
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            val result = if (a.result == AttemptResult.COMPLETED) "✅ Completed" else "❌ Failed"
+                            val result = if (a.result == AttemptResult.COMPLETED) "✅ Goal reached" else "🔁 Slipped, then restarted"
                             Text("Attempt #${i + 1}: $result", fontWeight = FontWeight.Bold)
                             Text("Lasted: ${formatDuration(a.durationMs)}")
                             Text(formatDate(a.endedAt), style = MaterialTheme.typography.bodySmall)
@@ -212,6 +222,12 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                                 )
                             }
                             if (a.note.isNotBlank()) Text(a.note, style = MaterialTheme.typography.bodySmall)
+                            if (a.warningSigns.isNotBlank()) {
+                                Text("Warning signs: ${a.warningSigns}", style = MaterialTheme.typography.bodySmall)
+                            }
+                            if (a.plan.isNotBlank()) {
+                                Text("Plan: ${a.plan}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -240,15 +256,18 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
     if (showRelapse) {
         RelapseDialog(
             onDismiss = { showRelapse = false },
-            onConfirm = { triggers, note ->
-                vm.relapse(c.id, triggers, note)
+            onConfirm = { triggers, note, warningSigns, plan ->
+                val totalBefore = Logic.totalCleanMs(c, System.currentTimeMillis())
+                vm.relapse(c.id, triggers, note, warningSigns, plan)
                 showRelapse = false
                 support = SupportMessage(
                     "A fresh start 🌅",
                     buildString {
-                        append("Your last attempt lasted ${formatDuration(elapsed)}.\n\n")
+                        append("This streak lasted ${formatDuration(elapsed)}. ")
+                        append("Your total clean time of ${formatDuration(totalBefore)} is still yours. One slip doesn't erase it.\n\n")
                         append(restartMessage(c.attemptNumber))
-                        if (triggers.isNotEmpty()) append("\n\nYour plan this time:\n\n").append(tipsFor(triggers))
+                        if (plan.isNotBlank()) append("\n\nYour plan:\n\"$plan\"")
+                        if (triggers.isNotEmpty()) append("\n\nIdeas that help:\n\n").append(tipsFor(triggers))
                     },
                 )
             },
@@ -355,16 +374,21 @@ private fun UrgeDialog(onDismiss: () -> Unit, onSave: (Int, List<Trigger>, Strin
 }
 
 @Composable
-private fun RelapseDialog(onDismiss: () -> Unit, onConfirm: (List<Trigger>, String) -> Unit) {
+private fun RelapseDialog(onDismiss: () -> Unit, onConfirm: (List<Trigger>, String, String, String) -> Unit) {
     var triggers by remember { mutableStateOf(emptyList<Trigger>()) }
     var note by remember { mutableStateOf("") }
+    var warningSigns by remember { mutableStateOf("") }
+    var plan by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Slipped? That's okay") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Be honest about what happened. Your next plan is built from it. The challenge will restart from zero.")
-                Text("Which pressure got you?")
+                Text(
+                    "A slip is a lesson, not the end. Only the current streak restarts; your total clean time and best streak stay. " +
+                        "Three quick questions turn this into a better plan:",
+                )
+                Text("1. Which pressure got you?", fontWeight = FontWeight.Bold)
                 TriggerPicker(triggers) { triggers = it }
                 OutlinedTextField(
                     value = note,
@@ -372,11 +396,25 @@ private fun RelapseDialog(onDismiss: () -> Unit, onConfirm: (List<Trigger>, Stri
                     label = { Text("What happened? (optional)") },
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Text("2. What warning signs came before it?", fontWeight = FontWeight.Bold)
+                OutlinedTextField(
+                    value = warningSigns,
+                    onValueChange = { warningSigns = it.take(200) },
+                    placeholder = { Text("e.g. I was in bed with my phone after midnight") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text("3. Next time this happens, I will…", fontWeight = FontWeight.Bold)
+                OutlinedTextField(
+                    value = plan,
+                    onValueChange = { plan = it.take(200) },
+                    placeholder = { Text("e.g. put the phone in another room and read") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(triggers, note) }) {
-                Text("Restart challenge", color = MaterialTheme.colorScheme.error)
+            TextButton(onClick = { onConfirm(triggers, note, warningSigns, plan) }) {
+                Text("Restart my streak")
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },

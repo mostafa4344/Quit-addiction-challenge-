@@ -47,6 +47,10 @@ data class Attempt(
     val result: AttemptResult,
     val triggers: List<Trigger> = emptyList(),
     val note: String = "",
+    /** What the user noticed before the slip, to spot it earlier next time. */
+    val warningSigns: String = "",
+    /** The user's own "next time I will…" plan written right after a slip. */
+    val plan: String = "",
 ) {
     val durationMs: Long get() = (endedAt - startedAt).coerceAtLeast(0)
 }

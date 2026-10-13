@@ -137,6 +137,13 @@ private fun ChallengeCard(c: Challenge, now: Long, onClick: () -> Unit) {
                         "Goal: ${formatGoal(c.goalHours)} • ${(progress * 100).toInt()}%",
                         style = MaterialTheme.typography.bodySmall,
                     )
+                    if (c.attempts.isNotEmpty()) {
+                        Text(
+                            "Total clean: ${formatDuration(Logic.totalCleanMs(c, now))} • Best: ${formatDuration(Logic.bestStreakMs(c, now))}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }

@@ -36,6 +36,8 @@ import com.mostafa.quitchallenge.ui.DetailScreen
 import com.mostafa.quitchallenge.ui.HomeScreen
 import com.mostafa.quitchallenge.ui.InsightsScreen
 import com.mostafa.quitchallenge.ui.NewChallengeScreen
+import com.mostafa.quitchallenge.ui.Onboarding
+import com.mostafa.quitchallenge.ui.OnboardingScreen
 import com.mostafa.quitchallenge.ui.ProtectionScreen
 import com.mostafa.quitchallenge.ui.theme.QuitTheme
 import kotlinx.coroutines.Dispatchers
@@ -100,6 +102,15 @@ fun App(vm: AppViewModel = viewModel()) {
             withContext(Dispatchers.IO) { LimitMonitor.check(context.applicationContext) }
             delay(60_000)
         }
+    }
+
+    var onboarded by rememberSaveable { mutableStateOf(Onboarding.isDone(context)) }
+    if (!onboarded) {
+        OnboardingScreen(onFinish = {
+            Onboarding.markDone(context)
+            onboarded = true
+        })
+        return
     }
 
     BackHandler(enabled = route != HOME) { route = HOME }

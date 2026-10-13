@@ -74,6 +74,32 @@ class LogicTest {
     }
 
     @Test
+    fun totalCleanTimeNeverResetsAfterASlip() {
+        val c = challenge(
+            start = 50 * HOUR_MS,
+            attempts = listOf(Attempt(0, 40 * HOUR_MS, AttemptResult.FAILED)),
+        )
+        assertEquals(50 * HOUR_MS, Logic.totalCleanMs(c, 60 * HOUR_MS))
+    }
+
+    @Test
+    fun cleanDaysCountsCalendarDaysWithoutSlips() {
+        val day = 24 * HOUR_MS
+        // Created on day 0, slipped on day 2 (twice) and day 4; today is day 5.
+        val c = challenge(
+            start = 4 * day + HOUR_MS,
+            attempts = listOf(
+                Attempt(0, 2 * day + HOUR_MS, AttemptResult.FAILED),
+                Attempt(2 * day + HOUR_MS, 2 * day + 5 * HOUR_MS, AttemptResult.FAILED),
+                Attempt(2 * day + 5 * HOUR_MS, 4 * day + HOUR_MS, AttemptResult.FAILED),
+            ),
+        )
+        assertEquals(4 to 6, Logic.cleanDaysInLast30(c, 5 * day + HOUR_MS, ZoneOffset.UTC))
+        // Only the last 30 days count once the challenge is older than that.
+        assertEquals(30 to 30, Logic.cleanDaysInLast30(c, 100 * day, ZoneOffset.UTC))
+    }
+
+    @Test
     fun formatsDurations() {
         assertEquals("7 days", formatGoal(168))
         assertEquals("1 day 6 hours", formatGoal(30))

@@ -35,16 +35,36 @@ class Repository(private val file: File, private val onChange: (AppData) -> Unit
         onChange(next)
     }
 
+    fun exportJson(): String = json.encodeToString(AppData.serializer(), state.value)
+
+    /** Replaces all data with a backup; returns false (and changes nothing) if the file isn't a valid backup. */
+    fun importJson(text: String): Boolean {
+        val imported = try {
+            json.decodeFromString(AppData.serializer(), text)
+        } catch (e: Exception) {
+            return false
+        }
+        update { imported }
+        return true
+    }
+
     fun updateChallenge(id: String, transform: (Challenge) -> Challenge) {
         update { d -> d.copy(challenges = d.challenges.map { if (it.id == id) transform(it) else it }) }
     }
 
     /** Records the failed attempt and immediately starts a fresh one. */
-    fun relapse(id: String, triggers: List<Trigger>, note: String, now: Long = System.currentTimeMillis()) {
+    fun relapse(
+        id: String,
+        triggers: List<Trigger>,
+        note: String,
+        now: Long = System.currentTimeMillis(),
+        warningSigns: String = "",
+        plan: String = "",
+    ) {
         updateChallenge(id) { c ->
             val start = c.currentStart ?: return@updateChallenge c
             c.copy(
-                attempts = c.attempts + Attempt(start, now, AttemptResult.FAILED, triggers, note.trim()),
+                attempts = c.attempts + Attempt(start, now, AttemptResult.FAILED, triggers, note.trim(), warningSigns.trim(), plan.trim()),
                 currentStart = now,
             )
         }

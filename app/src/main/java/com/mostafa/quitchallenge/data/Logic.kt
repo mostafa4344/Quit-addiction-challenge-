@@ -48,6 +48,27 @@ object Logic {
     fun nextMilestone(elapsedMs: Long): Milestone? =
         MILESTONES.firstOrNull { it.hours * HOUR_MS > elapsedMs }
 
+    /** All time spent clean across every attempt. Never goes back to zero after a slip. */
+    fun totalCleanMs(c: Challenge, now: Long): Long =
+        c.attempts.sumOf { it.durationMs } + elapsedMs(c, now)
+
+    /**
+     * Calendar days without a slip in the last 30 days (or since the challenge began),
+     * returned as (clean days, days counted).
+     */
+    fun cleanDaysInLast30(c: Challenge, now: Long, zone: ZoneId = ZoneId.systemDefault()): Pair<Int, Int> {
+        val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+        val created = Instant.ofEpochMilli(c.createdAt).atZone(zone).toLocalDate()
+        val first = maxOf(today.minusDays(29), created)
+        if (first.isAfter(today)) return 0 to 0
+        val slipDays = c.attempts
+            .filter { it.result == AttemptResult.FAILED }
+            .map { Instant.ofEpochMilli(it.endedAt).atZone(zone).toLocalDate() }
+            .toSet()
+        val days = generateSequence(first) { it.plusDays(1) }.takeWhile { !it.isAfter(today) }.toList()
+        return days.count { it !in slipDays } to days.size
+    }
+
     fun bestStreakMs(c: Challenge, now: Long): Long =
         maxOf(c.attempts.maxOfOrNull { it.durationMs } ?: 0L, elapsedMs(c, now))
 

@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit
 class LimitWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
     override fun doWork(): Result {
         LimitMonitor.check(applicationContext)
+        ProtectionWatch.check(applicationContext)
         // Keeps the home-screen widget's time fresh between app opens.
         ChallengeWidget.updateAll(applicationContext)
         return Result.success()
