@@ -95,6 +95,8 @@ fun ProtectionScreen(data: AppData, vm: AppViewModel) {
                 onGrant = { context.startActivity(GuardService.settingsIntent()) },
             )
 
+            AppLockCard()
+
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

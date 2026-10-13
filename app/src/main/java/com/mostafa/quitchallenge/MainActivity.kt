@@ -1,7 +1,8 @@
 package com.mostafa.quitchallenge
 
+import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.fragment.app.FragmentActivity
+import com.mostafa.quitchallenge.security.AppLock
+import com.mostafa.quitchallenge.security.LockScreen
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -38,17 +42,45 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
+    private var locked by mutableStateOf(false)
+    private var backgroundedAt = 0L
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Notifier.createChannel(this)
         LimitWorker.schedule(this)
+        locked = AppLock.isEnabled(this) && savedInstanceState?.getBoolean(KEY_UNLOCKED) != true
         setContent {
-            QuitTheme { App() }
+            QuitTheme {
+                if (locked) LockScreen(onUnlocked = { locked = false }) else App()
+            }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val lockOn = AppLock.isEnabled(this)
+        // Keep app content out of the recent-apps preview while the lock is on.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) setRecentsScreenshotEnabled(!lockOn)
+        if (lockOn && backgroundedAt > 0 && SystemClock.elapsedRealtime() - backgroundedAt > AppLock.RELOCK_AFTER_MS) {
+            locked = true
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Survive rotation without asking for the PIN again.
+        outState.putBoolean(KEY_UNLOCKED, !locked)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        backgroundedAt = SystemClock.elapsedRealtime()
     }
 }
 
+private const val KEY_UNLOCKED = "unlocked"
 private const val HOME = "home"
 private const val INSIGHTS = "insights"
 private const val PROTECT = "protect"

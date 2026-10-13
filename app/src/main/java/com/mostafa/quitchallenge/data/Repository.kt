@@ -1,6 +1,7 @@
 package com.mostafa.quitchallenge.data
 
 import android.content.Context
+import com.mostafa.quitchallenge.widget.ChallengeWidget
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -9,7 +10,7 @@ import java.io.File
 import java.util.UUID
 
 /** Keeps all app data in one JSON file on the device; no account or internet needed. */
-class Repository(private val file: File) {
+class Repository(private val file: File, private val onChange: (AppData) -> Unit = {}) {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val state = MutableStateFlow(load())
     val data: StateFlow<AppData> = state.asStateFlow()
@@ -31,6 +32,7 @@ class Repository(private val file: File) {
             file.writeText(tmp.readText())
             tmp.delete()
         }
+        onChange(next)
     }
 
     fun updateChallenge(id: String, transform: (Challenge) -> Challenge) {
@@ -89,6 +91,9 @@ object AppGraph {
 
     fun repo(context: Context): Repository =
         repository ?: synchronized(this) {
-            repository ?: Repository(File(context.applicationContext.filesDir, "data.json")).also { repository = it }
+            repository ?: run {
+                val app = context.applicationContext
+                Repository(File(app.filesDir, "data.json")) { ChallengeWidget.updateAll(app) }.also { repository = it }
+            }
         }
 }
