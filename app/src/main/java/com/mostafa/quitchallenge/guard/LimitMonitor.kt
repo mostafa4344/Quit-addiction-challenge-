@@ -20,7 +20,8 @@ object LimitMonitor {
     private const val PREFS = "limit_alerts"
 
     @Synchronized
-    fun check(context: Context, now: Long = System.currentTimeMillis()): List<LimitBreak> {
+    /** [showOverlay] puts a full-screen break screen over the current app (from background checks only). */
+    fun check(context: Context, now: Long = System.currentTimeMillis(), showOverlay: Boolean = false): List<LimitBreak> {
         if (!UsageTracker.hasUsageAccess(context)) return emptyList()
         val repo = AppGraph.repo(context)
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -45,11 +46,30 @@ object LimitMonitor {
                             "The challenge restarts now. Close the app and take a break, you can do this! 💪",
                     )
                     SupportWorker.scheduleAfterSlip(context, c.id, now)
+                    if (showOverlay) {
+                        WarningActivity.show(
+                            context,
+                            "⛔",
+                            "Time limit crossed",
+                            "You've used $apps for ${formatDuration(used)} today. Your limit is ${formatMinutes(c.dailyLimitMinutes)}.\n\n" +
+                                "\"${c.name}\" restarts now. Close the app and take a real break.",
+                            c.id,
+                        )
+                    }
                     breaks += LimitBreak(c, used)
                 } else if (limitMs > 0 && used >= limitMs * 8 / 10) {
                     val key = "warn_${c.id}_$from"
                     if (!prefs.getBoolean(key, false)) {
                         prefs.edit().putBoolean(key, true).apply()
+                        if (showOverlay) {
+                            WarningActivity.show(
+                                context,
+                                "⏳",
+                                "Time for a break",
+                                "Only ${formatDuration(limitMs - used)} left today on $apps.\n\nPut the phone down for a while: stretch, drink water, talk to someone.",
+                                c.id,
+                            )
+                        }
                         Notifier.show(
                             context,
                             c.id.hashCode(),

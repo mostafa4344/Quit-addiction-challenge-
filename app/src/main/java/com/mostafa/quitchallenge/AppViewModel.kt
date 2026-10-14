@@ -9,7 +9,6 @@ import com.mostafa.quitchallenge.data.Challenge
 import com.mostafa.quitchallenge.data.ChallengeType
 import com.mostafa.quitchallenge.data.TrackedApp
 import com.mostafa.quitchallenge.data.Trigger
-import com.mostafa.quitchallenge.data.hostOf
 import com.mostafa.quitchallenge.guard.SupportWorker
 import kotlinx.coroutines.flow.StateFlow
 import java.util.UUID
@@ -54,10 +53,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setPlan(trigger: Trigger, plan: String) = repo.setPlan(trigger, plan)
 
-    fun setPauseBeforeOpen(enabled: Boolean) {
-        repo.update { it.copy(settings = it.settings.copy(pauseBeforeOpen = enabled)) }
-    }
-
     fun relapse(challengeId: String, triggers: List<Trigger>, note: String, warningSigns: String, plan: String) {
         val now = System.currentTimeMillis()
         repo.relapse(challengeId, triggers, note, now, warningSigns, plan)
@@ -84,31 +79,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun setKeywordGuard(enabled: Boolean) {
-        repo.update { it.copy(settings = it.settings.copy(keywordGuard = enabled)) }
+    fun checkIn(challengeId: String) = repo.checkIn(challengeId)
+
+    fun setDailyCheckIn(enabled: Boolean) {
+        repo.update { it.copy(settings = it.settings.copy(dailyCheckIn = enabled)) }
     }
 
-    fun addKeyword(keyword: String) {
-        val kw = keyword.trim()
-        if (kw.isEmpty()) return
-        repo.update { d ->
-            if (d.settings.keywords.any { it.equals(kw, ignoreCase = true) }) d
-            else d.copy(settings = d.settings.copy(keywords = d.settings.keywords + kw))
-        }
-    }
-
-    fun addDomain(domain: String) {
-        val d = hostOf(domain)?.removePrefix("www.") ?: return
-        repo.update { data ->
-            if (d in data.settings.domains) data else data.copy(settings = data.settings.copy(domains = data.settings.domains + d))
-        }
-    }
-
-    fun removeDomain(domain: String) {
-        repo.update { it.copy(settings = it.settings.copy(domains = it.settings.domains - domain)) }
-    }
-
-    fun removeKeyword(keyword: String) {
-        repo.update { it.copy(settings = it.settings.copy(keywords = it.settings.keywords - keyword)) }
+    fun setCheckInHour(hour: Int) {
+        repo.update { it.copy(settings = it.settings.copy(checkInHour = hour.coerceIn(0, 23))) }
     }
 }

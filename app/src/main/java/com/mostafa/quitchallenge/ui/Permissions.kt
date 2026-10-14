@@ -34,7 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.mostafa.quitchallenge.guard.GuardService
+import com.mostafa.quitchallenge.guard.WarningActivity
 import com.mostafa.quitchallenge.guard.Notifier
 import com.mostafa.quitchallenge.guard.UsageTracker
 
@@ -52,11 +52,10 @@ fun PermissionsList() {
     // Re-read permission states regularly so they update after returning from system settings.
     val now = rememberNow(2_000L)
     val usageOk = key(now) { UsageTracker.hasUsageAccess(context) }
-    val guardOk = key(now) { GuardService.isEnabled(context) }
+    val overlayOk = key(now) { WarningActivity.canShow(context) }
     val notifyOk = key(now) { Notifier.canPost(context) }
     val batteryOk = key(now) { isIgnoringBatteryOptimizations(context) }
     val notifyLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    var showDisclosure by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         PermissionCard(
@@ -83,12 +82,17 @@ fun PermissionsList() {
         )
         PermissionCard(
             step = 3,
-            title = "🛡 Accessibility (Guard)",
-            description = "Shows an \"Are you sure?\" screen when you type a blocked keyword, and stops you the moment an app crosses its time limit. " +
-                "In settings, open \"Installed apps\" (or \"Downloaded apps\"), choose \"Quit Challenge Guard\" and turn it on.",
-            granted = guardOk,
-            restricted = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
-            onGrant = { showDisclosure = true },
+            title = "🪟 Display over other apps",
+            description = "Shows a full-screen \"Time for a break\" or \"Time limit crossed\" screen over the app you're using, " +
+                "instead of only a notification. Find Quit Challenge in the list and turn it on.",
+            granted = overlayOk,
+            restricted = Build.VERSION.SDK_INT >= 35,
+            onGrant = {
+                context.startActivity(
+                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            },
         )
         PermissionCard(
             step = 4,
@@ -103,40 +107,6 @@ fun PermissionsList() {
         )
     }
 
-    if (showDisclosure) {
-        AccessibilityDisclosure(
-            onDecline = { showDisclosure = false },
-            onAccept = {
-                showDisclosure = false
-                context.startActivity(GuardService.settingsIntent())
-            },
-        )
-    }
-}
-
-/** Prominent disclosure required before asking for the Accessibility service. */
-@Composable
-private fun AccessibilityDisclosure(onDecline: () -> Unit, onAccept: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDecline,
-        title = { Text("How Quit Challenge uses Accessibility") },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Quit Challenge Guard uses Android's Accessibility service to:", fontWeight = FontWeight.Bold)
-                Text("• Read the text you type, only to check it against your blocked keyword list.")
-                Text("• Notice which app is open, only to pause or stop you for apps in your time-limit challenges.")
-                Text("• Read the address bar of your web browser, only to check it against your blocked website list.")
-                Text("It does NOT:", fontWeight = FontWeight.Bold)
-                Text("• Save or record what you type.")
-                Text("• Read passwords.")
-                Text("• Send anything off your phone. There is no account and no server.")
-                Text("• Tap, type or change anything for you.")
-                Text("You can turn it off any time in Android Settings → Accessibility.")
-            }
-        },
-        confirmButton = { TextButton(onClick = onAccept) { Text("I agree, open settings") } },
-        dismissButton = { TextButton(onClick = onDecline) { Text("Not now") } },
-    )
 }
 
 @Composable

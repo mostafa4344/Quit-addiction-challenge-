@@ -10,21 +10,19 @@ import com.mostafa.quitchallenge.data.DayPart
 import com.mostafa.quitchallenge.data.HOUR_MS
 import com.mostafa.quitchallenge.data.Logic
 import com.mostafa.quitchallenge.data.MINUTE_MS
-import com.mostafa.quitchallenge.data.OpenAttempt
 import com.mostafa.quitchallenge.data.StartOption
-import com.mostafa.quitchallenge.data.hostOf
-import com.mostafa.quitchallenge.data.matchDomain
 import com.mostafa.quitchallenge.data.riskHeatmap
 import com.mostafa.quitchallenge.data.startTimeFor
-import com.mostafa.quitchallenge.data.openStats
 import com.mostafa.quitchallenge.data.Trigger
 import com.mostafa.quitchallenge.data.UrgeLog
 import com.mostafa.quitchallenge.data.UrgeSource
 import com.mostafa.quitchallenge.data.UsageEvent
 import com.mostafa.quitchallenge.data.computeInsights
-import com.mostafa.quitchallenge.data.findKeyword
 import com.mostafa.quitchallenge.data.foregroundTimeByPackage
 import com.mostafa.quitchallenge.data.formatDuration
+import com.mostafa.quitchallenge.data.isCheckInDue
+import com.mostafa.quitchallenge.data.checkedInToday
+import com.mostafa.quitchallenge.data.dayNumber
 import com.mostafa.quitchallenge.data.formatGoal
 import com.mostafa.quitchallenge.data.formatMinutes
 import org.junit.Assert.assertEquals
@@ -122,27 +120,6 @@ class LogicTest {
     }
 
     @Test
-    fun openStatsCountTodayOnly() {
-        val attempts = listOf(
-            OpenAttempt(5, "fb", skipped = true),
-            OpenAttempt(50, "fb", skipped = false),
-            OpenAttempt(60, "fb", skipped = true),
-            OpenAttempt(70, "yt", skipped = true),
-        )
-        assertEquals(2 to 1, openStats(attempts, setOf("fb"), from = 10))
-    }
-
-    @Test
-    fun browserAddressBarMatchesBlockedDomains() {
-        val domains = listOf("pornhub.com", "www.example.org")
-        assertEquals("pornhub.com", hostOf("https://www.pornhub.com/view?x=1")?.let { matchDomain(it, domains) })
-        assertEquals("pornhub.com", hostOf("m.pornhub.com/abc")?.let { matchDomain(it, domains) })
-        assertEquals("example.org", hostOf("example.org")?.let { matchDomain(it, domains) })
-        assertNull(hostOf("notpornhub.com")?.let { matchDomain(it, domains) })
-        assertNull(hostOf("search for something"))
-    }
-
-    @Test
     fun startOptionsLandOnFreshStarts() {
         // Wednesday 15 Jan 2025, 10:00 UTC.
         val now = java.time.ZonedDateTime.of(2025, 1, 15, 10, 0, 0, 0, ZoneOffset.UTC).toInstant().toEpochMilli()
@@ -166,6 +143,27 @@ class LogicTest {
         val grid = riskHeatmap(data, ZoneOffset.UTC)
         assertEquals(2, grid[3][DayPart.NIGHT.ordinal])
         assertEquals(2, grid.sumOf { it.sum() })
+    }
+
+    @Test
+    fun checkInIsDueOncePerDayAfterTheChosenHour() {
+        val day = 24 * HOUR_MS
+        val at20 = 3 * day + 20 * HOUR_MS
+        val at21 = 3 * day + 21 * HOUR_MS
+        assertFalse(isCheckInDue(at20, 21, null, ZoneOffset.UTC))
+        assertTrue(isCheckInDue(at21, 21, null, ZoneOffset.UTC))
+        assertTrue(isCheckInDue(at21, 21, "1970-01-03", ZoneOffset.UTC))
+        assertFalse(isCheckInDue(at21, 21, "1970-01-04", ZoneOffset.UTC))
+    }
+
+    @Test
+    fun checkedInTodayComparesLocalDates() {
+        val day = 24 * HOUR_MS
+        val c = challenge(start = 0).copy(lastCheckIn = 2 * day + 23 * HOUR_MS)
+        assertTrue(checkedInToday(c, 2 * day + 23 * HOUR_MS + 1000, ZoneOffset.UTC))
+        assertFalse(checkedInToday(c, 3 * day + HOUR_MS, ZoneOffset.UTC))
+        assertFalse(checkedInToday(challenge(start = 0), 0, ZoneOffset.UTC))
+        assertEquals(3L, dayNumber(c, 2 * day + HOUR_MS))
     }
 
     @Test
@@ -216,16 +214,6 @@ class LogicTest {
     }
 
     @Test
-    fun keywordMatchesWholeWordsOnly() {
-        val keywords = listOf("porn", "sex video")
-        assertEquals("porn", findKeyword("best PORN sites", keywords))
-        assertEquals("sex video", findKeyword("free sex video", keywords))
-        assertNull(findKeyword("pornography is long", listOf("porn")))
-        assertNull(findKeyword("middlesex video", keywords))
-        assertNull(findKeyword("weather today", keywords))
-    }
-
-    @Test
     fun insightsCountTriggersAndDayParts() {
         val night = 23 * HOUR_MS
         val morning = 8 * HOUR_MS
@@ -249,6 +237,5 @@ class LogicTest {
         assertEquals(2, insights.dayPartCounts.first { it.first == DayPart.MORNING }.second)
         assertEquals(50, insights.successRate)
         assertEquals(1, insights.urgesHandled)
-        assertEquals(1, insights.keywordAlerts)
     }
 }

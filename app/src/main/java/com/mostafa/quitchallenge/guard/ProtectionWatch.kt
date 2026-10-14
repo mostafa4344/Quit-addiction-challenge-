@@ -11,9 +11,8 @@ object ProtectionWatch {
     fun check(context: Context) {
         val data = AppGraph.repo(context).data.value
         val needsUsage = data.challenges.any { it.isActive && it.type == ChallengeType.APP_LIMIT }
-        val needsGuard = needsUsage || data.settings.keywordGuard
         watch(context, "usage", needsUsage, UsageTracker.hasUsageAccess(context), "Usage access")
-        watch(context, "guard", needsGuard, GuardService.isEnabled(context), "Quit Challenge Guard (Accessibility)")
+        watch(context, "overlay", needsUsage, WarningActivity.canShow(context), "Display over other apps")
     }
 
     private fun watch(context: Context, key: String, needed: Boolean, on: Boolean, name: String) {

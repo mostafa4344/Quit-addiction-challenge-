@@ -35,11 +35,8 @@ class Repository(private val file: File, private val onChange: (AppData) -> Unit
         onChange(next)
     }
 
-    fun logOpenAttempt(packageName: String, skipped: Boolean, now: Long = System.currentTimeMillis()) {
-        val keepFrom = now - 30 * 24 * HOUR_MS
-        update { d ->
-            d.copy(openAttempts = d.openAttempts.filter { it.time >= keepFrom } + OpenAttempt(now, packageName, skipped))
-        }
+    fun checkIn(id: String, now: Long = System.currentTimeMillis()) {
+        updateChallenge(id) { it.copy(lastCheckIn = now) }
     }
 
     fun setPlan(trigger: Trigger, plan: String) {

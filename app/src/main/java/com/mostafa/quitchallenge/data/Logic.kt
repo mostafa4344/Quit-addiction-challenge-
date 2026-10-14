@@ -139,23 +139,6 @@ fun foregroundTimeByPackage(events: List<UsageEvent>, packages: Set<String>, fro
     return totals
 }
 
-/** Finds the first keyword that appears in [text] as a whole word or phrase, ignoring case. */
-fun findKeyword(text: String, keywords: List<String>): String? {
-    val haystack = text.lowercase()
-    for (raw in keywords) {
-        val kw = raw.trim().lowercase()
-        if (kw.isEmpty()) continue
-        var i = haystack.indexOf(kw)
-        while (i >= 0) {
-            val before = haystack.getOrNull(i - 1)
-            val after = haystack.getOrNull(i + kw.length)
-            if ((before == null || !before.isLetterOrDigit()) && (after == null || !after.isLetterOrDigit())) return raw.trim()
-            i = haystack.indexOf(kw, i + 1)
-        }
-    }
-    return null
-}
-
 enum class DayPart(val label: String) {
     MORNING("🌅 Morning (5am–12pm)"),
     AFTERNOON("☀️ Afternoon (12pm–5pm)"),
@@ -175,12 +158,11 @@ data class Insights(
     val triggerCounts: List<Pair<Trigger, Int>>,
     val dayPartCounts: List<Pair<DayPart, Int>>,
     val urgesHandled: Int,
-    val keywordAlerts: Int,
     val failures: Int,
     val completions: Int,
     val totalCleanMs: Long,
 ) {
-    val hasData: Boolean get() = urgesHandled + keywordAlerts + failures + completions > 0
+    val hasData: Boolean get() = urgesHandled + failures + completions > 0
     val successRate: Int
         get() = if (failures + completions == 0) 0 else completions * 100 / (failures + completions)
 }
@@ -200,7 +182,6 @@ fun computeInsights(data: AppData, now: Long, zone: ZoneId = ZoneId.systemDefaul
         triggerCounts = triggerCounts,
         dayPartCounts = DayPart.entries.map { it to (parts[it] ?: 0) },
         urgesHandled = data.urges.count { it.resisted },
-        keywordAlerts = data.urges.count { it.source == UrgeSource.KEYWORD },
         failures = failed.size,
         completions = data.challenges.sumOf { it.completions },
         totalCleanMs = data.challenges.sumOf { c -> c.attempts.sumOf { it.durationMs } + Logic.elapsedMs(c, now) },
@@ -248,26 +229,6 @@ fun formatDate(ms: Long, zone: ZoneId = ZoneId.systemDefault()): String =
 fun formatMoney(amount: Double, currency: String): String =
     if (amount >= 100) "$currency${amount.toLong()}" else "$currency${"%.2f".format(Locale.ENGLISH, amount)}"
 
-/** Today's open attempts for a set of apps: (opened, skipped). */
-fun openStats(attempts: List<OpenAttempt>, packages: Set<String>, from: Long): Pair<Int, Int> {
-    val today = attempts.filter { it.time >= from && it.packageName in packages }
-    return today.size to today.count { it.skipped }
-}
-
-/** Pulls the host out of whatever a browser shows in its address bar ("m.site.com/path", "https://site.com"). */
-fun hostOf(addressBarText: String): String? {
-    val t = addressBarText.trim().lowercase()
-    if (t.isEmpty() || ' ' in t) return null
-    val noScheme = t.substringAfter("://")
-    val host = noScheme.substringBefore('/').substringBefore('?').substringBefore(':')
-    return host.takeIf { '.' in it }
-}
-
-/** Returns the blocked domain [host] belongs to, matching subdomains too. */
-fun matchDomain(host: String, domains: List<String>): String? =
-    domains.map { it.trim().lowercase().removePrefix("www.") }
-        .firstOrNull { d -> d.isNotEmpty() && (host == d || host.endsWith(".$d")) }
-
 /** Urges and slips counted by weekday (Monday first) × part of day. */
 fun riskHeatmap(data: AppData, zone: ZoneId = ZoneId.systemDefault()): List<List<Int>> {
     val grid = List(7) { IntArray(DayPart.entries.size) }
@@ -312,3 +273,17 @@ fun startTimeFor(option: StartOption, now: Long, zone: ZoneId = ZoneId.systemDef
     }
     return date.atStartOfDay(zone).toInstant().toEpochMilli()
 }
+
+/** The daily check-in is due once the chosen hour has passed and it hasn't been sent yet today. */
+fun isCheckInDue(now: Long, checkInHour: Int, lastSentDay: String?, zone: ZoneId = ZoneId.systemDefault()): Boolean {
+    val t = Instant.ofEpochMilli(now).atZone(zone)
+    return t.hour >= checkInHour && t.toLocalDate().toString() != lastSentDay
+}
+
+fun checkedInToday(c: Challenge, now: Long, zone: ZoneId = ZoneId.systemDefault()): Boolean {
+    val last = c.lastCheckIn ?: return false
+    return Instant.ofEpochMilli(last).atZone(zone).toLocalDate() == Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+}
+
+/** "Day 1" on the first day of a streak. */
+fun dayNumber(c: Challenge, now: Long): Long = Logic.elapsedMs(c, now) / (24 * HOUR_MS) + 1

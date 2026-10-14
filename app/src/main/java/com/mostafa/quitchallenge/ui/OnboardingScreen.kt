@@ -107,7 +107,8 @@ private fun Welcome() {
     Feature("⚡", "Help in hard moments", "Log an urge and get instant tips and your own reasons for quitting.")
     Feature("🌊", "Slips aren't the end", "A slip restarts the streak, but your total clean time and best streak always stay.")
     Feature("📊", "Know your pressures", "See which pressures and times of day pull you most, and plan for them.")
-    Feature("🛡", "Protection", "Break reminders, time limits and a keyword guard that asks \"Are you sure?\".")
+    Feature("📅", "Daily check-in", "One quick notification a day: still on track? Answer with one tap.")
+    Feature("🛡", "Protection", "App time limits with full-screen break reminders over the app you're using.")
     Text(
         "Everything stays on your phone. No account, no internet.",
         style = MaterialTheme.typography.bodySmall,

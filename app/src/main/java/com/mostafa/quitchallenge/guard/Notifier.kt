@@ -30,7 +30,13 @@ object Notifier {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
     @SuppressLint("MissingPermission")
-    fun show(context: Context, id: Int, title: String, text: String) {
+    fun show(
+        context: Context,
+        id: Int,
+        title: String,
+        text: String,
+        actions: List<Pair<String, PendingIntent>> = emptyList(),
+    ) {
         if (!canPost(context)) return
         createChannel(context)
         val open = PendingIntent.getActivity(
@@ -39,7 +45,7 @@ object Notifier {
             Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val notification = NotificationCompat.Builder(context, CHANNEL)
+        val builder = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(text)
@@ -47,7 +53,7 @@ object Notifier {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(open)
             .setAutoCancel(true)
-            .build()
-        NotificationManagerCompat.from(context).notify(id, notification)
+        actions.forEach { (label, intent) -> builder.addAction(0, label, intent) }
+        NotificationManagerCompat.from(context).notify(id, builder.build())
     }
 }

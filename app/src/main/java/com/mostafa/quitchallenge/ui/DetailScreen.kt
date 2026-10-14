@@ -51,13 +51,11 @@ import androidx.compose.ui.unit.dp
 import com.mostafa.quitchallenge.AppViewModel
 import com.mostafa.quitchallenge.data.AttemptResult
 import com.mostafa.quitchallenge.data.Challenge
-import com.mostafa.quitchallenge.data.OpenAttempt
-import androidx.compose.runtime.collectAsState
 import com.mostafa.quitchallenge.data.ChallengeType
 import com.mostafa.quitchallenge.data.MINUTE_MS
 import com.mostafa.quitchallenge.data.formatMinutes
 import com.mostafa.quitchallenge.data.formatMoney
-import com.mostafa.quitchallenge.data.openStats
+import com.mostafa.quitchallenge.data.checkedInToday
 import com.mostafa.quitchallenge.guard.UsageTracker
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.ui.platform.LocalContext
@@ -140,7 +138,7 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                 }
             }
 
-            if (c.type == ChallengeType.APP_LIMIT && c.isActive) AppUsageCard(c, vm.data.collectAsState().value.openAttempts)
+            if (c.type == ChallengeType.APP_LIMIT && c.isActive) AppUsageCard(c)
 
             when {
                 c.isActive && !Logic.hasStarted(c, now) -> {
@@ -183,6 +181,19 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         ) {
                             Text("🌊 I slipped")
+                        }
+                    }
+                    if (c.type == ChallengeType.TIMER) {
+                        if (checkedInToday(c, now)) {
+                            Text(
+                                "✅ Checked in today. See you tomorrow!",
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        } else {
+                            TextButton(onClick = { vm.checkIn(c.id) }, modifier = Modifier.fillMaxWidth()) {
+                                Text("📅 Check in: I stayed on track today")
+                            }
                         }
                     }
                 }
@@ -402,7 +413,7 @@ private fun RelapseDialog(onDismiss: () -> Unit, onConfirm: (List<Trigger>, Stri
 }
 
 @Composable
-private fun AppUsageCard(c: Challenge, vmOpenAttempts: List<OpenAttempt>) {
+private fun AppUsageCard(c: Challenge) {
     val context = LocalContext.current
     val usage by rememberTodayUsage(c)
     val used = usage.values.sum()
@@ -425,14 +436,6 @@ private fun AppUsageCard(c: Challenge, vmOpenAttempts: List<OpenAttempt>) {
             )
             c.trackedApps.forEach { app ->
                 Text("• ${app.label}: ${formatDuration(usage[app.packageName] ?: 0L)}", style = MaterialTheme.typography.bodySmall)
-            }
-            val (opened, skipped) = openStats(
-                vmOpenAttempts,
-                c.trackedApps.map { it.packageName }.toSet(),
-                Logic.usageWindowStart(c, System.currentTimeMillis()),
-            )
-            if (opened > 0) {
-                Text("🚪 Opened $opened times today, skipped $skipped at the pause screen", style = MaterialTheme.typography.bodySmall)
             }
             Text(
                 "Cross the limit and this challenge restarts automatically.",

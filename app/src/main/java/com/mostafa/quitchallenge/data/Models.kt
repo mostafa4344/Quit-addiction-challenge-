@@ -76,6 +76,8 @@ data class Challenge(
     val minutesPerDay: Int = 0,
     val moneyPerDay: Double = 0.0,
     val currency: String = "৳",
+    /** When the user last confirmed in a daily check-in that they're on track. */
+    val lastCheckIn: Long? = null,
 ) {
     val isActive: Boolean get() = currentStart != null
     val attemptNumber: Int get() = attempts.size + 1
@@ -83,6 +85,7 @@ data class Challenge(
     val completions: Int get() = attempts.count { it.result == AttemptResult.COMPLETED }
 }
 
+/** KEYWORD came from the removed keyword guard; kept so older saved data still loads. */
 @Serializable
 enum class UrgeSource { MANUAL, KEYWORD }
 
@@ -101,25 +104,12 @@ data class UrgeLog(
     val intensityAfter: Int? = null,
 )
 
-/** One attempt to open a limited app, caught by the pause screen. */
-@Serializable
-data class OpenAttempt(val time: Long, val packageName: String, val skipped: Boolean)
-
-val DEFAULT_DOMAINS = listOf(
-    "pornhub.com", "xvideos.com", "xnxx.com", "xhamster.com", "redtube.com",
-    "youporn.com", "onlyfans.com", "spankbang.com", "chaturbate.com",
-)
-
-val DEFAULT_KEYWORDS = listOf("porn", "xxx", "nsfw", "nude", "sex video", "xvideos", "pornhub", "onlyfans")
-
 @Serializable
 data class GuardSettings(
-    val keywordGuard: Boolean = true,
-    /** Show a short breathing pause before a time-limited app opens. */
-    val pauseBeforeOpen: Boolean = true,
-    val keywords: List<String> = DEFAULT_KEYWORDS,
-    /** Websites that trigger the warning when opened in a browser (subdomains included). */
-    val domains: List<String> = DEFAULT_DOMAINS,
+    /** Daily "are you still on track?" notification for self-reported challenges. */
+    val dailyCheckIn: Boolean = true,
+    /** Local hour (0–23) when the check-in is sent. */
+    val checkInHour: Int = 21,
 )
 
 @Serializable
@@ -129,5 +119,4 @@ data class AppData(
     val settings: GuardSettings = GuardSettings(),
     /** The user's own "if this pressure hits, then I will…" plans. */
     val plans: Map<Trigger, String> = emptyMap(),
-    val openAttempts: List<OpenAttempt> = emptyList(),
 )

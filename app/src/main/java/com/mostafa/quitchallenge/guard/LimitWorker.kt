@@ -12,7 +12,8 @@ import java.util.concurrent.TimeUnit
 /** Background fallback that checks time limits every 15 minutes, even with the guard service off. */
 class LimitWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
     override fun doWork(): Result {
-        LimitMonitor.check(applicationContext)
+        LimitMonitor.check(applicationContext, showOverlay = true)
+        CheckIn.check(applicationContext)
         ProtectionWatch.check(applicationContext)
         MilestoneNotifier.check(applicationContext)
         RiskReminder.check(applicationContext)

@@ -69,7 +69,6 @@ fun InsightsScreen(data: AppData, vm: AppViewModel) {
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatBox("Urges beaten", "${insights.urgesHandled}", Modifier.weight(1f))
-                StatBox("Keyword alerts", "${insights.keywordAlerts}", Modifier.weight(1f))
                 StatBox("Total clean time", formatDuration(insights.totalCleanMs), Modifier.weight(1f))
             }
 

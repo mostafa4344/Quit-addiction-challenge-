@@ -18,7 +18,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.InputChip
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.dp
 import com.mostafa.quitchallenge.AppViewModel
 import com.mostafa.quitchallenge.data.AppData
 import com.mostafa.quitchallenge.data.AppGraph
-import com.mostafa.quitchallenge.guard.GuardService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -50,8 +49,6 @@ import java.time.LocalDate
 @Composable
 fun ProtectionScreen(data: AppData, vm: AppViewModel) {
     val context = LocalContext.current
-    val guardOk = GuardService.isEnabled(context)
-    var newKeyword by remember { mutableStateOf("") }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Protection 🛡") }) }) { padding ->
         Column(
@@ -63,71 +60,16 @@ fun ProtectionScreen(data: AppData, vm: AppViewModel) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                "Turn these on so the app can track your app time, send break reminders and warn you before you search for something you're trying to quit.",
+                "Turn these on so the app can track your app time, show break reminders and send your daily check-in.",
                 style = MaterialTheme.typography.bodyMedium,
             )
 
             PermissionsList()
 
-            Card(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("⏸ Pause before opening limited apps", fontWeight = FontWeight.Bold)
-                        Text(
-                            "When you open an app from an app-limit challenge, take one breath first and choose: close it or open it. Needs step 3.",
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                    Switch(checked = data.settings.pauseBeforeOpen, onCheckedChange = { vm.setPauseBeforeOpen(it) })
-                }
-            }
+            CheckInCard(data, vm)
 
             AppLockCard()
 
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("🔎 Keyword guard", fontWeight = FontWeight.Bold)
-                            Text(
-                                "When you type any of these words, you'll see: \"You have tried to search … Are you sure you want to continue?\"",
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                        Switch(checked = data.settings.keywordGuard, onCheckedChange = { vm.setKeywordGuard(it) })
-                    }
-                    if (!guardOk) {
-                        Text(
-                            "Turn on step 3 (Accessibility) above for the keyword guard to work.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        data.settings.keywords.forEach { kw ->
-                            InputChip(selected = false, onClick = { vm.removeKeyword(kw) }, label = { Text("$kw ✕") })
-                        }
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = newKeyword,
-                            onValueChange = { newKeyword = it.take(40) },
-                            label = { Text("Add a keyword") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Button(
-                            onClick = {
-                                vm.addKeyword(newKeyword)
-                                newKeyword = ""
-                            },
-                            enabled = newKeyword.isNotBlank(),
-                        ) { Text("Add") }
-                    }
-                }
-            }
-
-            DomainCard(data, vm)
 
             BackupCard()
         }
@@ -205,36 +147,47 @@ private fun BackupCard() {
     }
 }
 
+private val CHECK_IN_HOURS = listOf(8, 12, 18, 21, 23)
+
+private fun hourLabel(h: Int): String = when {
+    h == 0 -> "12 AM"
+    h < 12 -> "$h AM"
+    h == 12 -> "12 PM"
+    else -> "${h - 12} PM"
+}
+
+/** Settings for the once-a-day "are you still on track?" notification. */
 @Composable
-private fun DomainCard(data: AppData, vm: AppViewModel) {
-    var newDomain by remember { mutableStateOf("") }
+private fun CheckInCard(data: AppData, vm: AppViewModel) {
     Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("🌐 Blocked websites", fontWeight = FontWeight.Bold)
-            Text(
-                "Opening one of these sites (or any of its subdomains) in Chrome, Samsung Internet, Firefox, Edge, Brave or Opera shows the \"Are you sure?\" screen, even from a link. Uses the keyword guard switch above.",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                data.settings.domains.forEach { d ->
-                    InputChip(selected = false, onClick = { vm.removeDomain(d) }, label = { Text("$d ✕") })
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("📅 Daily check-in", fontWeight = FontWeight.Bold)
+                    Text(
+                        "Once a day, each \"Stay away\" challenge asks: \"Did you stay on track today?\" " +
+                            "Answer right from the notification: ✅ keep going, or 🌊 slipped and restart.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
+                Switch(checked = data.settings.dailyCheckIn, onCheckedChange = { vm.setDailyCheckIn(it) })
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = newDomain,
-                    onValueChange = { newDomain = it.take(80) },
-                    label = { Text("e.g. example.com") },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
+            if (data.settings.dailyCheckIn) {
+                Text("Ask me at:", style = MaterialTheme.typography.bodyMedium)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CHECK_IN_HOURS.forEach { h ->
+                        FilterChip(
+                            selected = data.settings.checkInHour == h,
+                            onClick = { vm.setCheckInHour(h) },
+                            label = { Text(hourLabel(h)) },
+                        )
+                    }
+                }
+                Text(
+                    "It can arrive up to 15 minutes after the chosen time.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Button(
-                    onClick = {
-                        vm.addDomain(newDomain)
-                        newDomain = ""
-                    },
-                    enabled = newDomain.contains('.'),
-                ) { Text("Add") }
             }
         }
     }
