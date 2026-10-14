@@ -52,7 +52,7 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 @Composable
-fun ProtectionScreen(data: AppData, vm: AppViewModel) {
+fun ProtectionScreen(data: AppData, vm: AppViewModel, onOpenPrivacy: () -> Unit) {
     val context = LocalContext.current
 
     Scaffold(topBar = { TopAppBar(title = { Text("Protection 🛡") }) }) { padding ->
@@ -77,6 +77,10 @@ fun ProtectionScreen(data: AppData, vm: AppViewModel) {
 
 
             BackupCard()
+
+            TextButton(onClick = onOpenPrivacy, modifier = Modifier.fillMaxWidth()) {
+                Text("🔒 Privacy policy: your data never leaves this phone")
+            }
         }
     }
 }

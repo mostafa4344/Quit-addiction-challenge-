@@ -27,6 +27,10 @@
 1. রিপোর **Releases** অংশে **latest** খুলুন।
 2. `QuitChallenge.apk` ফোনে ডাউনলোড করে ইনস্টল করুন। প্রথমবার "Unknown sources / অজানা উৎস থেকে ইনস্টল" অনুমতি দিতে হতে পারে।
 
+## প্রাইভেসি
+
+অ্যাপ কোনো ডেটা সংগ্রহ বা শেয়ার করে না। পুরো নীতি: [docs/privacy-policy.html](docs/privacy-policy.html)। Play Store-এর চেকলিস্ট: [docs/play-store-checklist.md](docs/play-store-checklist.md)।
+
 ## ডেভেলপারদের জন্য
 
 - Kotlin + Jetpack Compose (Material 3), minSdk 26

@@ -41,6 +41,7 @@ import com.mostafa.quitchallenge.ui.NewChallengeScreen
 import com.mostafa.quitchallenge.ui.Onboarding
 import com.mostafa.quitchallenge.ui.OnboardingScreen
 import com.mostafa.quitchallenge.ui.ProtectionScreen
+import com.mostafa.quitchallenge.ui.PrivacyPolicyScreen
 import com.mostafa.quitchallenge.ui.SosScreen
 import com.mostafa.quitchallenge.ui.rememberPermissionStatus
 import androidx.compose.material3.Badge
@@ -118,6 +119,7 @@ private const val PROTECT = "protect"
 private const val NEW = "new"
 private const val DETAIL = "detail:"
 private const val SOS = "sos:"
+private const val PRIVACY = "privacy"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -193,13 +195,14 @@ fun App(requestedRoute: String? = null, onRouteConsumed: () -> Unit = {}, vm: Ap
                     onNew = { route = NEW },
                 )
                 route == INSIGHTS -> InsightsScreen(data, vm)
-                route == PROTECT -> ProtectionScreen(data, vm)
+                route == PROTECT -> ProtectionScreen(data, vm, onOpenPrivacy = { route = PRIVACY })
                 route == NEW -> NewChallengeScreen(
                     onBack = { route = HOME },
                     onCreate = { name, category, goalHours, why, type, apps, limit, minutes, money, startAt ->
                         route = DETAIL + vm.createChallenge(name, category, goalHours, why, type, apps, limit, minutes, money, startAt)
                     },
                 )
+                route == PRIVACY -> PrivacyPolicyScreen(onBack = { route = PROTECT })
                 route.startsWith(SOS) -> {
                     val id = route.removePrefix(SOS).ifEmpty { null }
                     SosScreen(id, data, vm, onClose = { route = if (id != null) DETAIL + id else HOME })
