@@ -19,6 +19,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.InputChip
+import android.app.TimePickerDialog
+import androidx.compose.foundation.clickable
+import com.mostafa.quitchallenge.data.MAX_CHECK_INS_PER_DAY
+import com.mostafa.quitchallenge.data.formatTimeOfDay
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -147,25 +152,38 @@ private fun BackupCard() {
     }
 }
 
-private val CHECK_IN_HOURS = listOf(8, 12, 18, 21, 23)
+private data class CheckInPreset(val label: String, val times: List<Int>)
 
-private fun hourLabel(h: Int): String = when {
-    h == 0 -> "12 AM"
-    h < 12 -> "$h AM"
-    h == 12 -> "12 PM"
-    else -> "${h - 12} PM"
-}
+private val CHECK_IN_PRESETS = listOf(
+    CheckInPreset("Once a day", listOf(21 * 60)),
+    CheckInPreset("Twice", listOf(9 * 60, 21 * 60)),
+    CheckInPreset("3 times", listOf(9 * 60, 15 * 60, 21 * 60)),
+    CheckInPreset("4 times", listOf(8 * 60, 12 * 60, 17 * 60, 22 * 60)),
+)
 
-/** Settings for the once-a-day "are you still on track?" notification. */
+/** Lets each person pick how many check-in notifications they get per day, and at what times. */
 @Composable
 private fun CheckInCard(data: AppData, vm: AppViewModel) {
+    val context = LocalContext.current
+    val times = data.settings.checkInTimes.sorted()
+
+    fun pickTime(initial: Int, onPicked: (Int) -> Unit) {
+        TimePickerDialog(
+            context,
+            { _, hour, minute -> onPicked(hour * 60 + minute) },
+            initial / 60,
+            initial % 60,
+            false,
+        ).show()
+    }
+
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("📅 Daily check-in", fontWeight = FontWeight.Bold)
+                    Text("📅 Check-in notifications", fontWeight = FontWeight.Bold)
                     Text(
-                        "Once a day, each \"Stay away\" challenge asks: \"Did you stay on track today?\" " +
+                        "Each \"Stay away\" challenge asks: \"Are you still on track?\" " +
                             "Answer right from the notification: ✅ keep going, or 🌊 slipped and restart.",
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -173,18 +191,44 @@ private fun CheckInCard(data: AppData, vm: AppViewModel) {
                 Switch(checked = data.settings.dailyCheckIn, onCheckedChange = { vm.setDailyCheckIn(it) })
             }
             if (data.settings.dailyCheckIn) {
-                Text("Ask me at:", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    if (times.isEmpty()) "No times set yet. Add at least one." else "${times.size} time${if (times.size == 1) "" else "s"} a day:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                // Tap a time to change it, ✕ to remove it.
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CHECK_IN_HOURS.forEach { h ->
+                    times.forEach { t ->
+                        InputChip(
+                            selected = true,
+                            onClick = { pickTime(t) { new -> vm.setCheckInTimes(times - t + new) } },
+                            label = { Text("🕘 ${formatTimeOfDay(t)}") },
+                            trailingIcon = {
+                                Text(
+                                    "✕",
+                                    modifier = Modifier.clickable { vm.setCheckInTimes(times - t) },
+                                )
+                            },
+                        )
+                    }
+                }
+                if (times.size < MAX_CHECK_INS_PER_DAY) {
+                    OutlinedButton(onClick = { pickTime(times.lastOrNull()?.plus(60)?.rem(24 * 60) ?: (21 * 60)) { vm.setCheckInTimes(times + it) } }) {
+                        Text("➕ Add a time")
+                    }
+                }
+                Text("Quick choices:", style = MaterialTheme.typography.bodySmall)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CHECK_IN_PRESETS.forEach { preset ->
                         FilterChip(
-                            selected = data.settings.checkInHour == h,
-                            onClick = { vm.setCheckInHour(h) },
-                            label = { Text(hourLabel(h)) },
+                            selected = times == preset.times,
+                            onClick = { vm.setCheckInTimes(preset.times) },
+                            label = { Text(preset.label) },
                         )
                     }
                 }
                 Text(
-                    "It can arrive up to 15 minutes after the chosen time.",
+                    "Up to $MAX_CHECK_INS_PER_DAY times a day. Tap a time to change it.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

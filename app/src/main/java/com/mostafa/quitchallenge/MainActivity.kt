@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mostafa.quitchallenge.guard.LimitMonitor
+import com.mostafa.quitchallenge.guard.CheckInAlarm
 import com.mostafa.quitchallenge.guard.LimitWorker
 import com.mostafa.quitchallenge.guard.Notifier
 import com.mostafa.quitchallenge.ui.DetailScreen
@@ -61,6 +62,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         Notifier.createChannel(this)
         LimitWorker.schedule(this)
+        CheckInAlarm.schedule(this)
         locked = AppLock.isEnabled(this) && savedInstanceState?.getBoolean(KEY_UNLOCKED) != true
         if (savedInstanceState == null) requestedRoute = routeFrom(intent)
         setContent {

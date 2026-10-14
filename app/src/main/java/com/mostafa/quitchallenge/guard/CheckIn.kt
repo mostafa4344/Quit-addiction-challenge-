@@ -8,10 +8,11 @@ import com.mostafa.quitchallenge.data.AppGraph
 import com.mostafa.quitchallenge.data.Challenge
 import com.mostafa.quitchallenge.data.ChallengeType
 import com.mostafa.quitchallenge.data.Logic
-import com.mostafa.quitchallenge.data.checkedInToday
 import com.mostafa.quitchallenge.data.dayNumber
 import com.mostafa.quitchallenge.data.formatDuration
-import com.mostafa.quitchallenge.data.isCheckInDue
+import com.mostafa.quitchallenge.data.HOUR_MS
+import com.mostafa.quitchallenge.data.dueCheckInSlots
+import com.mostafa.quitchallenge.data.nextCheckInAt
 import java.time.LocalDate
 
 /**
@@ -23,7 +24,6 @@ object CheckIn {
     const val ACTION_SLIPPED = "com.mostafa.quitchallenge.CHECK_IN_SLIPPED"
     const val EXTRA_ID = "challenge_id"
     private const val PREFS = "check_in"
-    private const val KEY_LAST_SENT = "last_sent_day"
 
     fun notificationId(challengeId: String): Int = challengeId.hashCode() + 3
 
@@ -32,12 +32,20 @@ object CheckIn {
         val settings = data.settings
         if (!settings.dailyCheckIn) return
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        if (!isCheckInDue(now, settings.checkInHour, prefs.getString(KEY_LAST_SENT, null))) return
-        prefs.edit().putString(KEY_LAST_SENT, LocalDate.now().toString()).apply()
+        val key = "sent_${LocalDate.now()}"
+        val sentToday = prefs.getStringSet(key, emptySet()).orEmpty().mapNotNull { it.toIntOrNull() }.toSet()
+        val due = dueCheckInSlots(now, settings.checkInTimes, sentToday)
+        if (due.isEmpty()) return
+        // If several times were missed (phone off), send one notification and mark them all as done.
+        prefs.edit()
+            .clear()
+            .putStringSet(key, (sentToday + due).map { it.toString() }.toSet())
+            .apply()
 
         data.challenges
             .filter { it.type == ChallengeType.TIMER && Logic.hasStarted(it, now) && !Logic.isGoalReached(it, now) }
-            .filterNot { checkedInToday(it, now) }
+            // Skip a challenge the user confirmed less than an hour ago.
+            .filter { c -> c.lastCheckIn == null || now - c.lastCheckIn > HOUR_MS }
             .forEach { ask(context, it, now) }
     }
 
@@ -46,7 +54,7 @@ object CheckIn {
             context,
             notificationId(c.id),
             "📅 Daily check-in: ${c.name}",
-            "Day ${dayNumber(c, now)} (${formatDuration(Logic.elapsedMs(c, now))}). Did you stay on track today? Be honest; a slip only restarts the streak.",
+            "Day ${dayNumber(c, now)} (${formatDuration(Logic.elapsedMs(c, now))}). Are you still on track? Be honest; a slip only restarts the streak.",
             actions = listOf(
                 "✅ Yes, on track" to action(context, c.id, ACTION_ON_TRACK),
                 "🌊 I slipped" to action(context, c.id, ACTION_SLIPPED),
@@ -94,5 +102,37 @@ class CheckInReceiver : BroadcastReceiver() {
                 )
             }
         }
+    }
+}
+
+/**
+ * Wakes the app at each chosen check-in time, so notifications arrive on time instead of
+ * waiting for the 15-minute background check. Inexact alarms need no special permission.
+ */
+object CheckInAlarm {
+    fun schedule(context: Context) {
+        val app = context.applicationContext
+        val alarms = app.getSystemService(android.app.AlarmManager::class.java) ?: return
+        val intent = PendingIntent.getBroadcast(
+            app,
+            0,
+            Intent(app, CheckInAlarmReceiver::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val settings = AppGraph.repo(app).data.value.settings
+        val next = if (settings.dailyCheckIn) nextCheckInAt(System.currentTimeMillis(), settings.checkInTimes) else null
+        if (next == null) {
+            alarms.cancel(intent)
+        } else {
+            alarms.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, next, intent)
+        }
+    }
+}
+
+/** Fires at a check-in time (and after reboot): sends due check-ins and schedules the next alarm. */
+class CheckInAlarmReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        CheckIn.check(context)
+        CheckInAlarm.schedule(context)
     }
 }

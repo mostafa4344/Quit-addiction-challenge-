@@ -274,10 +274,31 @@ fun startTimeFor(option: StartOption, now: Long, zone: ZoneId = ZoneId.systemDef
     return date.atStartOfDay(zone).toInstant().toEpochMilli()
 }
 
-/** The daily check-in is due once the chosen hour has passed and it hasn't been sent yet today. */
-fun isCheckInDue(now: Long, checkInHour: Int, lastSentDay: String?, zone: ZoneId = ZoneId.systemDefault()): Boolean {
+const val MAX_CHECK_INS_PER_DAY = 6
+
+/** Today's check-in times (minutes after midnight) that have passed but weren't sent yet. */
+fun dueCheckInSlots(now: Long, times: List<Int>, sentToday: Set<Int>, zone: ZoneId = ZoneId.systemDefault()): List<Int> {
     val t = Instant.ofEpochMilli(now).atZone(zone)
-    return t.hour >= checkInHour && t.toLocalDate().toString() != lastSentDay
+    val minuteOfDay = t.hour * 60 + t.minute
+    return times.distinct().sorted().filter { it <= minuteOfDay && it !in sentToday }
+}
+
+/** The next moment any check-in time comes up, strictly after [now]. */
+fun nextCheckInAt(now: Long, times: List<Int>, zone: ZoneId = ZoneId.systemDefault()): Long? {
+    if (times.isEmpty()) return null
+    val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    return (0L..1L).asSequence()
+        .flatMap { d -> times.asSequence().map { m -> today.plusDays(d).atStartOfDay(zone).plusMinutes(m.toLong()) } }
+        .map { it.toInstant().toEpochMilli() }
+        .filter { it > now }
+        .minOrNull()
+}
+
+fun formatTimeOfDay(minutes: Int): String {
+    val h = minutes / 60
+    val m = minutes % 60
+    val h12 = if (h % 12 == 0) 12 else h % 12
+    return "%d:%02d %s".format(Locale.ENGLISH, h12, m, if (h < 12) "AM" else "PM")
 }
 
 fun checkedInToday(c: Challenge, now: Long, zone: ZoneId = ZoneId.systemDefault()): Boolean {

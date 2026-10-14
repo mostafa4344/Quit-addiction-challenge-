@@ -108,8 +108,8 @@ data class UrgeLog(
 data class GuardSettings(
     /** Daily "are you still on track?" notification for self-reported challenges. */
     val dailyCheckIn: Boolean = true,
-    /** Local hour (0–23) when the check-in is sent. */
-    val checkInHour: Int = 21,
+    /** Times of day for the check-in, as minutes after midnight (e.g. 21 * 60 = 9:00 PM). One notification per time. */
+    val checkInTimes: List<Int> = listOf(21 * 60),
 )
 
 @Serializable

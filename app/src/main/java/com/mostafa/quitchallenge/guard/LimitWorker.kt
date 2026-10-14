@@ -14,6 +14,7 @@ class LimitWorker(context: Context, params: WorkerParameters) : Worker(context, 
     override fun doWork(): Result {
         LimitMonitor.check(applicationContext, showOverlay = true)
         CheckIn.check(applicationContext)
+        CheckInAlarm.schedule(applicationContext)
         ProtectionWatch.check(applicationContext)
         MilestoneNotifier.check(applicationContext)
         RiskReminder.check(applicationContext)

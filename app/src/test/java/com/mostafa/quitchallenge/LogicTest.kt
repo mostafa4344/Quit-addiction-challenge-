@@ -20,7 +20,9 @@ import com.mostafa.quitchallenge.data.UsageEvent
 import com.mostafa.quitchallenge.data.computeInsights
 import com.mostafa.quitchallenge.data.foregroundTimeByPackage
 import com.mostafa.quitchallenge.data.formatDuration
-import com.mostafa.quitchallenge.data.isCheckInDue
+import com.mostafa.quitchallenge.data.dueCheckInSlots
+import com.mostafa.quitchallenge.data.nextCheckInAt
+import com.mostafa.quitchallenge.data.formatTimeOfDay
 import com.mostafa.quitchallenge.data.checkedInToday
 import com.mostafa.quitchallenge.data.dayNumber
 import com.mostafa.quitchallenge.data.formatGoal
@@ -146,14 +148,28 @@ class LogicTest {
     }
 
     @Test
-    fun checkInIsDueOncePerDayAfterTheChosenHour() {
+    fun checkInSlotsFireOnceEachAfterTheirTime() {
         val day = 24 * HOUR_MS
-        val at20 = 3 * day + 20 * HOUR_MS
-        val at21 = 3 * day + 21 * HOUR_MS
-        assertFalse(isCheckInDue(at20, 21, null, ZoneOffset.UTC))
-        assertTrue(isCheckInDue(at21, 21, null, ZoneOffset.UTC))
-        assertTrue(isCheckInDue(at21, 21, "1970-01-03", ZoneOffset.UTC))
-        assertFalse(isCheckInDue(at21, 21, "1970-01-04", ZoneOffset.UTC))
+        val times = listOf(21 * 60, 9 * 60)
+        val at8 = 3 * day + 8 * HOUR_MS
+        val at930 = 3 * day + 9 * HOUR_MS + 30 * 60_000
+        val at22 = 3 * day + 22 * HOUR_MS
+        assertEquals(emptyList<Int>(), dueCheckInSlots(at8, times, emptySet(), ZoneOffset.UTC))
+        assertEquals(listOf(9 * 60), dueCheckInSlots(at930, times, emptySet(), ZoneOffset.UTC))
+        assertEquals(emptyList<Int>(), dueCheckInSlots(at930, times, setOf(9 * 60), ZoneOffset.UTC))
+        assertEquals(listOf(21 * 60), dueCheckInSlots(at22, times, setOf(9 * 60), ZoneOffset.UTC))
+    }
+
+    @Test
+    fun nextCheckInIsTheSoonestUpcomingTime() {
+        val day = 24 * HOUR_MS
+        val times = listOf(9 * 60, 21 * 60)
+        assertEquals(3 * day + 21 * HOUR_MS, nextCheckInAt(3 * day + 10 * HOUR_MS, times, ZoneOffset.UTC))
+        assertEquals(4 * day + 9 * HOUR_MS, nextCheckInAt(3 * day + 22 * HOUR_MS, times, ZoneOffset.UTC))
+        assertNull(nextCheckInAt(0, emptyList(), ZoneOffset.UTC))
+        assertEquals("9:05 PM", formatTimeOfDay(21 * 60 + 5))
+        assertEquals("12:00 AM", formatTimeOfDay(0))
+        assertEquals("12:30 PM", formatTimeOfDay(12 * 60 + 30))
     }
 
     @Test

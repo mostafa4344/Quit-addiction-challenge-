@@ -9,6 +9,8 @@ import com.mostafa.quitchallenge.data.Challenge
 import com.mostafa.quitchallenge.data.ChallengeType
 import com.mostafa.quitchallenge.data.TrackedApp
 import com.mostafa.quitchallenge.data.Trigger
+import com.mostafa.quitchallenge.data.MAX_CHECK_INS_PER_DAY
+import com.mostafa.quitchallenge.guard.CheckInAlarm
 import com.mostafa.quitchallenge.guard.SupportWorker
 import kotlinx.coroutines.flow.StateFlow
 import java.util.UUID
@@ -83,9 +85,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setDailyCheckIn(enabled: Boolean) {
         repo.update { it.copy(settings = it.settings.copy(dailyCheckIn = enabled)) }
+        CheckInAlarm.schedule(getApplication())
     }
 
-    fun setCheckInHour(hour: Int) {
-        repo.update { it.copy(settings = it.settings.copy(checkInHour = hour.coerceIn(0, 23))) }
+    fun setCheckInTimes(times: List<Int>) {
+        val clean = times.map { it.coerceIn(0, 24 * 60 - 1) }.distinct().sorted().take(MAX_CHECK_INS_PER_DAY)
+        repo.update { it.copy(settings = it.settings.copy(checkInTimes = clean)) }
+        CheckInAlarm.schedule(getApplication())
     }
 }
