@@ -62,6 +62,7 @@ fun InsightsScreen(data: AppData, vm: AppViewModel) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            SetupBanner()
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StatBox("Goals reached", "${insights.completions}", Modifier.weight(1f))
                 StatBox("Slips", "${insights.failures}", Modifier.weight(1f))

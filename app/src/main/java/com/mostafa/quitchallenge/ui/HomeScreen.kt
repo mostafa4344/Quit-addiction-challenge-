@@ -63,6 +63,7 @@ fun HomeScreen(data: AppData, onOpen: (String) -> Unit, onNew: () -> Unit) {
             contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item { SetupBanner() }
             item {
                 Card(
                     Modifier.fillMaxWidth(),

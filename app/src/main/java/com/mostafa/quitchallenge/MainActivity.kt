@@ -41,6 +41,10 @@ import com.mostafa.quitchallenge.ui.Onboarding
 import com.mostafa.quitchallenge.ui.OnboardingScreen
 import com.mostafa.quitchallenge.ui.ProtectionScreen
 import com.mostafa.quitchallenge.ui.SosScreen
+import com.mostafa.quitchallenge.ui.rememberPermissionStatus
+import androidx.compose.material3.Badge
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.BadgedBox
 import com.mostafa.quitchallenge.ui.theme.QuitTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -113,11 +117,13 @@ private const val NEW = "new"
 private const val DETAIL = "detail:"
 private const val SOS = "sos:"
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App(requestedRoute: String? = null, onRouteConsumed: () -> Unit = {}, vm: AppViewModel = viewModel()) {
     val data by vm.data.collectAsStateWithLifecycle()
     var route by rememberSaveable { mutableStateOf(HOME) }
     val isTab = route == HOME || route == INSIGHTS || route == PROTECT
+    val permissions = rememberPermissionStatus()
     val context = LocalContext.current
 
     // Keep app-limit challenges up to date while the app is open.
@@ -165,7 +171,12 @@ fun App(requestedRoute: String? = null, onRouteConsumed: () -> Unit = {}, vm: Ap
                     NavigationBarItem(
                         selected = route == PROTECT,
                         onClick = { route = PROTECT },
-                        icon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                        icon = {
+                            // Red badge with the number of permissions still off.
+                            BadgedBox(badge = { if (permissions.missing > 0) Badge { Text("${permissions.missing}") } }) {
+                                Icon(Icons.Default.Lock, contentDescription = null)
+                            }
+                        },
                         label = { Text("Protection") },
                     )
                 }

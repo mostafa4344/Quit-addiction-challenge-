@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -45,20 +46,48 @@ private fun appInfoIntent(context: Context): Intent =
     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-/** All protection permissions with live status, plain-language help and the steps for "restricted settings". */
+data class PermissionStatus(
+    val usage: Boolean,
+    val notifications: Boolean,
+    val overlay: Boolean,
+    val battery: Boolean,
+) {
+    val done: Int get() = listOf(usage, notifications, overlay, battery).count { it }
+    val total: Int get() = 4
+    val missing: Int get() = total - done
+}
+
+fun permissionStatus(context: Context): PermissionStatus = PermissionStatus(
+    usage = UsageTracker.hasUsageAccess(context),
+    notifications = Notifier.canPost(context),
+    overlay = WarningActivity.canShow(context),
+    battery = isIgnoringBatteryOptimizations(context),
+)
+
+/** Live permission status, re-read every 2 seconds so it updates after returning from system settings. */
 @Composable
-fun PermissionsList() {
+fun rememberPermissionStatus(): PermissionStatus {
     val context = LocalContext.current
-    // Re-read permission states regularly so they update after returning from system settings.
     val now = rememberNow(2_000L)
-    val usageOk = key(now) { UsageTracker.hasUsageAccess(context) }
-    val overlayOk = key(now) { WarningActivity.canShow(context) }
-    val notifyOk = key(now) { Notifier.canPost(context) }
-    val batteryOk = key(now) { isIgnoringBatteryOptimizations(context) }
+    return key(now) { permissionStatus(context) }
+}
+
+/**
+ * All protection permissions with live status, plain-language help and the steps for "restricted settings".
+ * With [onlyMissing], only the ones still off are shown.
+ */
+@Composable
+fun PermissionsList(onlyMissing: Boolean = false) {
+    val context = LocalContext.current
+    val status = rememberPermissionStatus()
+    val usageOk = status.usage
+    val overlayOk = status.overlay
+    val notifyOk = status.notifications
+    val batteryOk = status.battery
     val notifyLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        PermissionCard(
+        if (!onlyMissing || !usageOk) PermissionCard(
             step = 1,
             title = "📲 Usage access",
             description = "Measures how long you use each app (the same data Digital Wellbeing uses). Needed for app time-limit challenges.",
@@ -66,7 +95,7 @@ fun PermissionsList() {
             restricted = Build.VERSION.SDK_INT >= 35,
             onGrant = { context.startActivity(UsageTracker.usageAccessSettingsIntent()) },
         )
-        PermissionCard(
+        if (!onlyMissing || !notifyOk) PermissionCard(
             step = 2,
             title = "🔔 Notifications",
             description = "Break reminders near your limit, milestone celebrations and encouragement after a slip.",
@@ -80,7 +109,7 @@ fun PermissionsList() {
                 }
             },
         )
-        PermissionCard(
+        if (!onlyMissing || !overlayOk) PermissionCard(
             step = 3,
             title = "🪟 Display over other apps",
             description = "Shows a full-screen \"Time for a break\" or \"Time limit crossed\" screen over the app you're using, " +
@@ -94,7 +123,7 @@ fun PermissionsList() {
                 )
             },
         )
-        PermissionCard(
+        if (!onlyMissing || !batteryOk) PermissionCard(
             step = 4,
             title = "🔋 Battery: unrestricted",
             description = "Some phones (Samsung, Xiaomi, Oppo, Vivo…) stop background protection to save battery. " +
@@ -150,6 +179,41 @@ private fun PermissionCard(
                     OutlinedButton(onClick = { context.startActivity(appInfoIntent(context)) }) { Text("Open app info") }
                 }
             }
+        }
+    }
+}
+
+/**
+ * A hard-to-miss card that stays at the top of the main screens until every permission is on,
+ * because without them the daily check-ins, break screens and app time tracking can't work.
+ */
+@Composable
+fun SetupBanner() {
+    val status = rememberPermissionStatus()
+    if (status.missing == 0) return
+    Card(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        ),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                "⚠️ Protection isn't fully on (${status.done} of ${status.total} done)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                "These permissions are what make your challenge work: daily check-ins, break reminders and app time tracking. " +
+                    "Without them the app can't protect you. Tap \"Turn on\" for each one below; this message goes away when all are on.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            LinearProgressIndicator(
+                progress = { status.done / status.total.toFloat() },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            PermissionsList(onlyMissing = true)
         }
     }
 }
