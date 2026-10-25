@@ -31,6 +31,14 @@
 
 অ্যাপ কোনো ডেটা সংগ্রহ বা শেয়ার করে না। পুরো নীতি: [docs/privacy-policy.html](docs/privacy-policy.html)। Play Store-এর চেকলিস্ট: [docs/play-store-checklist.md](docs/play-store-checklist.md)।
 
+## নিজের Windows কম্পিউটারে সেটআপ
+
+PowerShell খুলে এই একটা কমান্ড চালান। Git, Java 17, Android SDK, adb আর Claude Code ইনস্টল হবে, প্রজেক্ট ডাউনলোড ও বিল্ড হবে, আর USB-তে লাগানো ফোনে অ্যাপ বসে যাবে:
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/mostafa4344/Quit-addiction-challenge-/refs/heads/claude/new-app-development-j2flg3/scripts/setup-windows.ps1 | iex"
+```
+
 ## ডেভেলপারদের জন্য
 
 - Kotlin + Jetpack Compose (Material 3), minSdk 26
