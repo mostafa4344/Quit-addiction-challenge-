@@ -99,7 +99,11 @@ class AppFlowTest {
             val r = area.visibleBounds
             val x = r.left + r.width() / 8
             device.swipe(x, r.top + r.height() * 3 / 4, x, r.top + r.height() / 3, 20)
-            device.findObject(By.textContains(t))?.let { return it }
+            if (device.findObject(By.textContains(t)) != null) {
+                // Let the scroll settle before handing back an object to click.
+                Thread.sleep(700)
+                return text(t, 2_000)
+            }
         }
         return text(t, 2_000)
     }
@@ -193,10 +197,17 @@ class AppFlowTest {
         launch()
         newChallenge()
         tap("App time limit")
-        tap("Choose apps")
-        text("Choose apps")
+        scrollTo("Choose apps").click()
+        text("Search apps")
         shot("20-app-picker")
-        find(By.text("Settings"), "Settings app in list", 20_000).click()
+        tap("Search apps")
+        find(By.clazz("android.widget.EditText"), "search field").text = "Settings"
+        // The search field also says "Settings"; pick the list row.
+        val row = (0 until 40).firstNotNullOfOrNull {
+            device.findObjects(By.text("Settings")).firstOrNull { it.className != "android.widget.EditText" }
+                ?: run { Thread.sleep(500); null }
+        } ?: run { shot("MISSING-settings-row"); fail("Settings app not in list"); error("unreachable") }
+        row.click()
         tap("Done")
         scrollTo("I commit to this challenge").click()
         scrollTo("Start challenge").click()

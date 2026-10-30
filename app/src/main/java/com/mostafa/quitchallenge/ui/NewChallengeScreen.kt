@@ -341,19 +341,25 @@ private fun AppPickerDialog(initial: List<TrackedApp>, onDismiss: () -> Unit, on
     }
     var selected by remember { mutableStateOf(initial.map { it.packageName }.toSet()) }
     var query by remember { mutableStateOf("") }
+    // Search stays hidden until asked for: an auto-focused field pops the keyboard over half the list.
+    var searching by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Choose apps") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    label = { Text("Search") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                if (searching) {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        label = { Text("Search") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    TextButton(onClick = { searching = true }) { Text("🔍 Search apps") }
+                }
                 val list = installed
                 if (list == null) {
                     Text("Loading apps…")
