@@ -218,17 +218,17 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
             MilestoneSection(c, elapsed)
 
             SectionTitle("📊 Stats")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatRow {
                 StatBox("Total clean time", formatDuration(Logic.totalCleanMs(c, now)), Modifier.weight(1f))
                 StatBox("Best streak", formatDuration(Logic.bestStreakMs(c, now)), Modifier.weight(1f))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatRow {
                 val (clean, counted) = Logic.cleanDaysInLast30(c, now)
                 StatBox("Slip-free days (last 30)", "$clean / $counted", Modifier.weight(1f))
                 StatBox("Urges beaten", "${urges.count { it.resisted }}", Modifier.weight(1f))
             }
             if (c.minutesPerDay > 0 || c.moneyPerDay > 0) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatRow {
                     if (c.minutesPerDay > 0) {
                         StatBox("Time won back", formatDuration(Logic.savedMinutes(c, now) * MINUTE_MS), Modifier.weight(1f))
                     }
@@ -237,7 +237,7 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                     }
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatRow {
                 StatBox("Current attempt", "#${c.attemptNumber}", Modifier.weight(1f))
                 StatBox("Goals reached", "${c.completions}", Modifier.weight(1f))
                 StatBox("Slips", "${c.failures}", Modifier.weight(1f))

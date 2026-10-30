@@ -9,6 +9,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -114,7 +116,7 @@ fun TriggerPicker(selected: List<Trigger>, onChange: (List<Trigger>) -> Unit) {
 @Composable
 fun StatBox(label: String, value: String, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier,
+        modifier = modifier.fillMaxHeight(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Column(
@@ -127,6 +129,18 @@ fun StatBox(label: String, value: String, modifier: Modifier = Modifier) {
             Text(label, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
         }
     }
+}
+
+/** A row of [StatBox]es that all get the height of the tallest one (labels wrap with big fonts). */
+@Composable
+fun StatRow(content: @Composable RowScope.() -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        content = content,
+    )
 }
 
 @Composable

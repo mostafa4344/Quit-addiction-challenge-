@@ -63,12 +63,13 @@ fun InsightsScreen(data: AppData, vm: AppViewModel) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             SetupBanner()
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatRow {
                 StatBox("Goals reached", "${insights.completions}", Modifier.weight(1f))
                 StatBox("Slips", "${insights.failures}", Modifier.weight(1f))
-                StatBox("Success rate", "${insights.successRate}%", Modifier.weight(1f))
+                val finished = insights.completions + insights.failures
+                StatBox("Success rate", if (finished == 0) "–" else "${insights.successRate}%", Modifier.weight(1f))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatRow {
                 StatBox("Urges beaten", "${insights.urgesHandled}", Modifier.weight(1f))
                 StatBox("Total clean time", formatDuration(insights.totalCleanMs), Modifier.weight(1f))
             }
@@ -155,7 +156,7 @@ private fun PlansSection(data: AppData, topTriggers: List<Trigger>, vm: AppViewM
             }
         }
     }
-    OutlinedButton(onClick = { picking = true }) { Text("➕ Add a plan for another pressure") }
+    OutlinedButton(onClick = { picking = true }) { Text(if (shown.isEmpty()) "➕ Write my first plan" else "➕ Add a plan for another pressure") }
 
     if (picking) {
         AlertDialog(

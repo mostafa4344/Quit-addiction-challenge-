@@ -141,7 +141,7 @@ fun NewChallengeScreen(
                 if (isAppLimit) {
                     "The app tracks how long you use the chosen apps each day. Cross the daily limit and the challenge fails and restarts automatically."
                 } else {
-                    "A timer runs while you stay away. If you slip, tap \"I failed\" and the challenge restarts from zero."
+                    "A timer runs while you stay away. If you slip, tap \"I slipped\": only the streak restarts, your total clean time stays."
                 },
                 style = MaterialTheme.typography.bodySmall,
             )
