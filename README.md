@@ -20,16 +20,23 @@
 
 অ্যাপের ভাষা ইংরেজি। Play Store-এর নিয়ম মাথায় রেখে অ্যাপে Accessibility পারমিশন ব্যবহার করা হয় না। সব ডেটা শুধু ফোনেই থাকে। কোনো অ্যাকাউন্ট বা ইন্টারনেট লাগে না।
 
-## APK ডাউনলোড
+## ডাউনলোড
 
-প্রতিবার কোড পুশ হলে GitHub Actions নিজে থেকেই APK বানায়।
+- **ওয়েবসাইট:** https://mostafa4344.github.io/Quit-addiction-challenge-/ (Download for Android বাটন সর্বশেষ সাইন করা ভার্সন নামায়)
+- **সরাসরি:** রিপোর **Releases** পেজে সর্বশেষ `Quit Challenge x.y.z` থেকে `QuitChallenge.apk`
+- **Google Play:** শিগগিরই (ধাপগুলো [docs/release-guide.md](docs/release-guide.md)-এ)
 
-1. রিপোর **Releases** অংশে **latest** খুলুন।
-2. `QuitChallenge.apk` ফোনে ডাউনলোড করে ইনস্টল করুন। প্রথমবার "Unknown sources / অজানা উৎস থেকে ইনস্টল" অনুমতি দিতে হতে পারে।
+টেস্টারদের জন্য প্রতিটা পুশের debug বিল্ড **dev-build** নামের pre-release-এ থাকে। এটা সাধারণ ব্যবহারকারীর জন্য নয়।
+
+## রিলিজ
+
+- ধাপে ধাপে গাইড: [docs/release-guide.md](docs/release-guide.md)
+- Play Store-এর লেখা আর ছবি: [play-store/](play-store/)
+- পরের আপডেটের পরিকল্পনা: [docs/roadmap.md](docs/roadmap.md)
 
 ## প্রাইভেসি
 
-অ্যাপ কোনো ডেটা সংগ্রহ বা শেয়ার করে না। পুরো নীতি: [docs/privacy-policy.html](docs/privacy-policy.html)। Play Store-এর চেকলিস্ট: [docs/play-store-checklist.md](docs/play-store-checklist.md)।
+অ্যাপ কোনো ডেটা সংগ্রহ বা শেয়ার করে না। পুরো নীতি: [docs/privacy-policy.html](docs/privacy-policy.html) (অ্যাপের ভেতরের কপিসহ `scripts/gen_privacy_policy.py` থেকে তৈরি)। Play Store-এর চেকলিস্ট: [docs/play-store-checklist.md](docs/play-store-checklist.md)।
 
 ## নিজের Windows কম্পিউটারে সেটআপ
 
@@ -41,6 +48,6 @@ powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.c
 
 ## ডেভেলপারদের জন্য
 
-- Kotlin + Jetpack Compose (Material 3), minSdk 26
+- Kotlin + Jetpack Compose (Material 3), minSdk 26, targetSdk 36 (Android 16)
 - বিল্ড: `./gradlew assembleDebug`
 - টেস্ট: `./gradlew testDebugUnitTest`

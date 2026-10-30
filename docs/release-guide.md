@@ -31,7 +31,7 @@
 প্রজেক্ট ফোল্ডারে PowerShell খুলে:
 
 ```powershell
-winget install GitHub.cli        # প্রথমবার; তারপর নতুন PowerShell খুলুন
+winget install GitHub.cli        # setup-windows.ps1 চালালে আগেই বসানো থাকে
 gh auth login                    # GitHub-এ লগইন (ব্রাউজারে কোড দিয়ে)
 powershell -ExecutionPolicy Bypass -File scripts\create-release-key.ps1
 ```

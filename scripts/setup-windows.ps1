@@ -49,6 +49,9 @@ function Install-WithWinget($id, $name) {
 Step "1/7 Git"
 if (Get-Command git -ErrorAction SilentlyContinue) { Ok "Git is already installed" }
 else { Install-WithWinget "Git.Git" "Git"; Ok "Git installed" }
+# GitHub CLI: used by scripts\create-release-key.ps1 to store the signing key as GitHub secrets.
+if (Get-Command gh -ErrorAction SilentlyContinue) { Ok "GitHub CLI is already installed" }
+else { Install-WithWinget "GitHub.cli" "GitHub CLI"; Ok "GitHub CLI installed" }
 
 # ---------------------------------------------------------------------------
 Step "2/7 Java 17 (needed to build Android apps)"
@@ -107,7 +110,7 @@ Write-Host "    Accepting Android SDK licenses..."
 $yes = ("y`n" * 30)
 $yes | & $sdkManager --licenses | Out-Null
 Write-Host "    Installing platform-tools (adb), Android 14 platform and build tools (a few minutes)..."
-& $sdkManager "platform-tools" "platforms;android-34" "build-tools;34.0.0" | Out-Null
+& $sdkManager "platform-tools" "platforms;android-36" "build-tools;35.0.0" | Out-Null
 if (-not (Test-Path (Join-Path $SdkDir "platform-tools\adb.exe"))) { throw "adb was not installed. Check your internet connection and run again." }
 Ok "Android SDK at $SdkDir"
 

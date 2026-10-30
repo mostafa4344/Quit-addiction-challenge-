@@ -28,8 +28,14 @@ On Windows (PowerShell), from the project folder:
 .\gradlew.bat assembleDebug          # APK at app\build\outputs\apk\debug\app-debug.apk
 ```
 
-Run the unit tests before every push. CI (`.github/workflows/android.yml`) runs the same on every
-push and publishes the APK as the `latest` GitHub release.
+Run the unit tests before every push. CI on every push:
+- `android.yml`: unit tests, debug + release (R8) builds, debug APK as the `dev-build` pre-release
+- `device-tests.yml`: UI tests on 5 emulators (Android 8, 11, 13 small screen + big font, 15, and 16
+  running the shrunk release build); screenshots and logs go to `device-results/<name>` branches
+- `store-screenshots.yml`: Play Store screenshots with demo data (`StoreScreenshots.kt`)
+- `release.yml`: on a `v*` tag, the signed public APK + AAB (needs the QC_* signing secrets)
+
+Releasing is described in `docs/release-guide.md`; the next work is in `docs/roadmap.md`.
 
 ## Running on the connected phone (adb)
 
@@ -69,6 +75,10 @@ for crashes -> fix -> repeat. Ask the owner before anything that wipes app data 
 - Keep logic that can be tested in `data/` as pure functions and add tests in `LogicTest.kt`.
 - Saved JSON must stay backward compatible: add fields with defaults, never remove enum values
   (`UrgeSource.KEYWORD` stays so old data loads).
-- `PrivacyPolicy.kt` and `docs/privacy-policy.html` must say the same thing; update both together.
+- `PrivacyPolicy.kt` and `docs/privacy-policy.html` are generated together by
+  `scripts/gen_privacy_policy.py`; edit the script, never the outputs by hand.
+- Target SDK must follow Google Play's yearly rule (API 36 since 31 Aug 2026). The app is edge-to-edge:
+  full-screen content without a Scaffold uses `CenteredScroll` or `safeDrawingPadding()`.
+- Never commit signing keys (`keystore.properties`, `*.jks`); they live on the owner's PC.
 - Don't add the Internet permission, analytics or an Accessibility service without asking the owner:
   the privacy policy and the Play Store plan depend on not having them.
