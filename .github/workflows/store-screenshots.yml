@@ -1,0 +1,62 @@
+name: Store screenshots
+
+# Takes the Google Play screenshots (StoreScreenshots.kt) on a Pixel 7 emulator and pushes the
+# raw PNGs to the store-screenshots/raw branch. scripts/frame_screenshots.py adds the captions.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "app/src/androidTest/java/com/mostafa/quitchallenge/StoreScreenshots.kt"
+      - ".github/workflows/store-screenshots.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Build app and tests
+        run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+
+      - name: Take screenshots
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: |
+            ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.mostafa.quitchallenge.StoreScreenshots -Pandroid.testInstrumentationRunnerArguments.storeShots=true || true
+            mkdir -p shots && adb pull /data/local/tmp/store-shots shots/raw || true
+            adb logcat -d -b crash > shots/crash.txt || true
+
+      - name: Publish to a branch
+        if: always()
+        run: |
+          mkdir -p shots
+          echo "commit: ${{ github.sha }}" > shots/RUN.txt
+          cd shots
+          git init -q
+          git checkout -q -b raw
+          git add -A
+          git -c user.name="store-shots" -c user.email="store-shots@users.noreply.github.com" commit -qm "Store screenshots for ${{ github.sha }}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" "raw:refs/heads/store-screenshots/raw"
