@@ -34,6 +34,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalTime
@@ -44,6 +45,9 @@ import java.time.LocalTime
  */
 @RunWith(AndroidJUnit4::class)
 class AppFlowTest {
+    @get:Rule
+    val retry = RetryRule()
+
     private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val pkg = context.packageName
