@@ -107,7 +107,7 @@ fun InsightsScreen(data: AppData, vm: AppViewModel) {
             }
             RiskHeatmap(riskHeatmap(data))
             riskSummary(riskHeatmap(data), insights)?.let {
-                Text("🧭 $it", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Text("📌 $it", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
             }
             insights.dayPartCounts.maxByOrNull { it.second }?.takeIf { it.second > 0 }?.let { (part, _) ->
                 Text(
@@ -187,6 +187,7 @@ private fun PlansSection(data: AppData, topTriggers: List<Trigger>, vm: AppViewM
             title = { Text("${t.emoji} If I feel ${t.label.lowercase()}…") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    NoAutoKeyboard()
                     OutlinedTextField(
                         value = text,
                         onValueChange = { text = it.take(200) },

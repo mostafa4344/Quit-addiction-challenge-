@@ -375,6 +375,7 @@ private fun RelapseDialog(onDismiss: () -> Unit, onConfirm: (List<Trigger>, Stri
         title = { Text("Slipped? That's okay") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                NoAutoKeyboard()
                 Text(
                     "A slip is a lesson, not the end. Only the current streak restarts; your total clean time and best streak stay. " +
                         "Three quick questions turn this into a better plan:",

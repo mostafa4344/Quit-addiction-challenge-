@@ -8,7 +8,7 @@ enum class Trigger(val label: String, val emoji: String, val tip: String) {
     STRESS("Stress", "😣", "Take 5 slow breaths (in for 4s, hold 7s, out for 8s) or go for a short walk."),
     BOREDOM("Boredom", "😐", "Keep a ready 'when I'm bored' list: read, work out, learn a new skill."),
     LONELINESS("Loneliness", "😔", "Call a friend or family member, or go somewhere with people around."),
-    TIREDNESS("Tiredness", "🥱", "A tired mind is a weak mind. Sleep on time and keep the phone away from your bed."),
+    TIREDNESS("Tiredness", "😴", "A tired mind is a weak mind. Sleep on time and keep the phone away from your bed."),
     ANXIETY("Anxiety", "😰", "Write your worries down on paper, then finish one small task."),
     SOCIAL("Peer pressure", "👥", "Prepare a sentence for saying 'no' in advance and avoid risky places."),
     HABIT("Habit / routine time", "⏰", "At the time the urge usually hits, put a different routine in its place."),

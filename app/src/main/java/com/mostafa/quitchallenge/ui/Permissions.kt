@@ -138,7 +138,7 @@ fun rememberPermissionSteps(): List<PermissionStep> {
         ),
         PermissionStep(
             number = 3,
-            title = "🪟 Display over other apps",
+            title = "📢 Display over other apps",
             why = "to show full-screen break reminders",
             description = "Shows a full-screen \"Time for a break\" or \"Time limit crossed\" screen over the app you're using, " +
                 "instead of only a notification. Find Quit Challenge in the list and turn it on.",

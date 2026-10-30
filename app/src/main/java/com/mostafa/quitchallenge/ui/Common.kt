@@ -3,6 +3,10 @@
 package com.mostafa.quitchallenge.ui
 
 import android.content.Context
+import android.view.WindowManager
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +47,20 @@ import com.mostafa.quitchallenge.guard.UsageTracker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+
+/**
+ * Call inside a dialog's content: older Android versions focus the first text field when a dialog
+ * opens, popping the keyboard over the dialog. The keyboard now appears only when a field is tapped.
+ */
+@Composable
+fun NoAutoKeyboard() {
+    val view = LocalView.current
+    SideEffect {
+        (view.parent as? DialogWindowProvider)?.window?.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE,
+        )
+    }
+}
 
 /** Current time that recomposes every [intervalMs], for live timers. */
 @Composable

@@ -349,6 +349,7 @@ private fun AppPickerDialog(initial: List<TrackedApp>, onDismiss: () -> Unit, on
         title = { Text("Choose apps") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                NoAutoKeyboard()
                 if (searching) {
                     OutlinedTextField(
                         value = query,

@@ -19,7 +19,7 @@ val MILESTONES = listOf(
     Milestone(72, "3 days", "🔥"),
     Milestone(168, "1 week", "💪"),
     Milestone(336, "2 weeks", "🏅"),
-    Milestone(504, "21 days", "🧠"),
+    Milestone(504, "21 days", "🌳"),
     Milestone(720, "1 month", "🏆"),
     Milestone(1440, "2 months", "💎"),
     Milestone(2160, "3 months", "👑"),

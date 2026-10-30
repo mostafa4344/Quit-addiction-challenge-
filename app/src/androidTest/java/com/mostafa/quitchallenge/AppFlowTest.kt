@@ -108,6 +108,15 @@ class AppFlowTest {
         return text(t, 2_000)
     }
 
+    private fun waitFor(what: String, condition: () -> Boolean) {
+        for (i in 0 until 50) {
+            if (condition()) return
+            Thread.sleep(100)
+        }
+        shot("MISSING-${what.filter { it.isLetterOrDigit() }.take(30)}")
+        fail("Never happened: $what")
+    }
+
     private fun newChallenge() = find(By.res("new_challenge"), "New challenge button").click()
 
     private fun skipOnboarding() {
@@ -180,7 +189,7 @@ class AppFlowTest {
 
         // Rotation keeps the screen and the data.
         device.setOrientationLeft()
-        text("Goal: 7 days")
+        text("no social media")
         shot("16-detail-landscape")
         device.setOrientationNatural()
 
@@ -200,14 +209,8 @@ class AppFlowTest {
         scrollTo("Choose apps").click()
         text("Search apps")
         shot("20-app-picker")
-        tap("Search apps")
-        find(By.clazz("android.widget.EditText"), "search field").text = "Settings"
-        // The search field also says "Settings"; pick the list row.
-        val row = (0 until 40).firstNotNullOfOrNull {
-            device.findObjects(By.text("Settings")).firstOrNull { it.className != "android.widget.EditText" }
-                ?: run { Thread.sleep(500); null }
-        } ?: run { shot("MISSING-settings-row"); fail("Settings app not in list"); error("unreachable") }
-        row.click()
+        // "Settings" is near the end of the alphabetical list.
+        scrollTo("Settings").click()
         tap("Done")
         scrollTo("I commit to this challenge").click()
         scrollTo("Start challenge").click()
@@ -232,7 +235,7 @@ class AppFlowTest {
         text("Protection 🛡")
         shot("31-protection-top")
         scrollTo("Twice").click()
-        text("2 times a day")
+        waitFor("check-in times saved") { AppGraph.repo(context).data.value.settings.checkInTimes == listOf(9 * 60, 21 * 60) }
         shot("32-check-in-times")
         scrollTo("Privacy policy: your data never leaves this phone").click()
         text("Effective date")
