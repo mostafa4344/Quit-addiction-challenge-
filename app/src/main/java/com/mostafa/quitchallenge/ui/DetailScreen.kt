@@ -7,7 +7,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -171,13 +174,14 @@ fun DetailScreen(challenge: Challenge, urges: List<UrgeLog>, vm: AppViewModel, o
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(onClick = onSos, modifier = Modifier.weight(1f)) {
+                    // Equal heights even when large text wraps one label onto two lines.
+                    Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Button(onClick = onSos, modifier = Modifier.weight(1f).fillMaxHeight()) {
                             Text("🆘 I feel an urge")
                         }
                         OutlinedButton(
                             onClick = { showRelapse = true },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         ) {
                             Text("🌊 I slipped")

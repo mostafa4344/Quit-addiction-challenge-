@@ -76,12 +76,29 @@ class AppFlowTest {
         assertTrue("app did not open", device.wait(Until.hasObject(By.pkg(pkg).depth(0)), 15_000))
     }
 
+    /**
+     * Polls for [selector]. Screens with a live timer refresh their accessibility tree every second,
+     * so a single lookup can miss a node that is plainly on screen.
+     */
     private fun find(selector: BySelector, what: String, timeout: Long = 10_000): UiObject2 =
-        device.wait(Until.findObject(selector), timeout) ?: run {
+        pollFor(selector, timeout) ?: run {
             shot("MISSING-${what.filter { it.isLetterOrDigit() }.take(30)}")
             fail("Not on screen: \"$what\"")
             error("unreachable")
         }
+
+    private fun pollFor(selector: BySelector, timeout: Long): UiObject2? {
+        val end = System.currentTimeMillis() + timeout
+        while (System.currentTimeMillis() < end) {
+            try {
+                device.findObject(selector)?.let { return it }
+            } catch (e: Exception) {
+                // the node went stale mid-lookup; try again
+            }
+            Thread.sleep(250)
+        }
+        return null
+    }
 
     private fun text(t: String, timeout: Long = 10_000) = find(By.textContains(t), t, timeout)
 
