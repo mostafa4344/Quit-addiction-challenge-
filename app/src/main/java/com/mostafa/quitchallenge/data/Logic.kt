@@ -39,8 +39,13 @@ object Logic {
         return (elapsedMs(c, now).toDouble() / goal).toFloat().coerceIn(0f, 1f)
     }
 
-    /** False while a challenge is scheduled to begin later. */
-    fun hasStarted(c: Challenge, now: Long): Boolean = c.currentStart != null && c.currentStart <= now
+    /**
+     * False while a challenge is scheduled to begin later. Screens tick once a second, so a streak
+     * restarted "just now" can be a few hundred ms ahead of the screen's clock; that still counts as started.
+     */
+    fun hasStarted(c: Challenge, now: Long): Boolean = c.currentStart != null && c.currentStart <= now + START_GRACE_MS
+
+    private const val START_GRACE_MS = 5_000L
 
     fun isGoalReached(c: Challenge, now: Long): Boolean =
         c.isActive && elapsedMs(c, now) >= goalMs(c)

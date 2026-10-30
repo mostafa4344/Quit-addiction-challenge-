@@ -183,6 +183,15 @@ class LogicTest {
     }
 
     @Test
+    fun aJustRestartedStreakCountsAsStarted() {
+        // The screen's clock lags up to a second behind a restart that just happened.
+        assertTrue(Logic.hasStarted(challenge(start = 10_500), now = 10_000))
+        // A challenge scheduled for later is not started yet.
+        assertFalse(Logic.hasStarted(challenge(start = 10 * HOUR_MS), now = 0))
+        assertFalse(Logic.hasStarted(challenge(start = null), now = 0))
+    }
+
+    @Test
     fun formatsDurations() {
         assertEquals("7 days", formatGoal(168))
         assertEquals("1 day 6 hours", formatGoal(30))
