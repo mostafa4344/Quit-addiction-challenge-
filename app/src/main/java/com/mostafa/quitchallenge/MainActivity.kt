@@ -154,7 +154,7 @@ fun App(requestedRoute: String? = null, onRouteConsumed: () -> Unit = {}, vm: Ap
         }
     }
 
-    BackHandler(enabled = route != HOME) { route = HOME }
+    BackHandler(enabled = route != HOME) { route = if (route == PRIVACY) PROTECT else HOME }
 
     Scaffold(
         bottomBar = {

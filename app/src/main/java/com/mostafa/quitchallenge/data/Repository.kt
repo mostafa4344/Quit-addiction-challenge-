@@ -121,6 +121,11 @@ object AppGraph {
     @Volatile
     private var repository: Repository? = null
 
+    /** Drops the cached repository so the next [repo] call reloads from disk (used by on-device tests). */
+    internal fun reset() {
+        repository = null
+    }
+
     fun repo(context: Context): Repository =
         repository ?: synchronized(this) {
             repository ?: run {

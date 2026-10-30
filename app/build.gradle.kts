@@ -15,6 +15,7 @@ android {
         targetSdk = 34
         versionCode = 9
         versionName = "0.7.1"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -52,4 +53,9 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.8.3")
 
     testImplementation("junit:junit:4.13.2")
+
+    // On-device tests that drive the real app like a user (run on emulators in CI).
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
 }

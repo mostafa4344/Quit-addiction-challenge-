@@ -1,0 +1,74 @@
+name: Device tests
+
+# Installs the app on several emulators (old and new Android, small screen, large font)
+# and drives it like a user. Screenshots and logs are uploaded for review.
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: android-8-api26
+            api: 26
+            profile: pixel_2
+            font: "1.0"
+          - name: android-11-api30
+            api: 30
+            profile: pixel_4
+            font: "1.0"
+          - name: android-14-small-screen-big-font
+            api: 34
+            profile: Nexus 4
+            font: "1.3"
+          - name: android-15-api35
+            api: 35
+            profile: pixel_7
+            font: "1.0"
+    name: ${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Build app and tests
+        run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+
+      - name: Run on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          FONT_SCALE: ${{ matrix.font }}
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: ${{ matrix.profile }}
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: ./scripts/run-device-tests.sh
+
+      - name: Collect test report
+        if: always()
+        run: cp -r app/build/reports/androidTests device-results/report 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: device-results-${{ matrix.name }}
+          path: device-results
