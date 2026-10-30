@@ -4,3 +4,7 @@
 -keep class androidx.tracing.** { *; }
 -keep class androidx.concurrent.futures.** { *; }
 -keep class androidx.annotation.** { *; }
+-keep class kotlin.** { *; }
+-keep class kotlinx.** { *; }
+-keep class androidx.core.** { *; }
+-keep class androidx.lifecycle.** { *; }
