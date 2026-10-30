@@ -87,24 +87,31 @@ class AppFlowTest {
 
     private fun tap(t: String) = text(t).click()
 
-    /** Scrolls the screen's scrollable area until [t] is visible. */
+    /**
+     * Scrolls until [t] is visible. Swipes along the left edge of the scrollable area so the
+     * gesture never starts on a floating button.
+     */
     private fun scrollTo(t: String): UiObject2 {
         device.findObject(By.textContains(t))?.let { return it }
-        repeat(12) {
+        repeat(15) {
             val area = device.findObjects(By.scrollable(true)).maxByOrNull { it.visibleBounds.height() }
                 ?: return text(t)
-            area.scroll(Direction.DOWN, 0.7f)
+            val r = area.visibleBounds
+            val x = r.left + r.width() / 8
+            device.swipe(x, r.top + r.height() * 3 / 4, x, r.top + r.height() / 3, 20)
             device.findObject(By.textContains(t))?.let { return it }
         }
         return text(t, 2_000)
     }
+
+    private fun newChallenge() = find(By.res("new_challenge"), "New challenge button").click()
 
     private fun skipOnboarding() {
         Onboarding.markDone(context)
     }
 
     private fun createStayAwayChallenge() {
-        tap("New challenge")
+        newChallenge()
         text("Challenge type")
         shot("new-challenge-top")
         scrollTo("I commit to this challenge").click()
@@ -126,9 +133,9 @@ class AppFlowTest {
         text("Keep it private")
         shot("03-onboarding-lock")
         tap("Start using the app")
-        scrollTo("No challenges yet")
         text("Protection isn't fully on")
         shot("04-home-empty")
+        scrollTo("No challenges yet")
     }
 
     @Test
@@ -184,7 +191,7 @@ class AppFlowTest {
     fun appLimitChallenge_pickAppAndSeeUsageCard() {
         skipOnboarding()
         launch()
-        tap("New challenge")
+        newChallenge()
         tap("App time limit")
         tap("Choose apps")
         text("Choose apps")
@@ -198,7 +205,7 @@ class AppFlowTest {
 
         shell("appops set $pkg GET_USAGE_STATS allow")
         device.pressBack()
-        tap("Settings") // open the challenge card again (its name mentions the app)
+        scrollTo("day on Settings").click() // open the challenge card again
         text("used of", 40_000)
         shot("22-app-limit-usage")
     }

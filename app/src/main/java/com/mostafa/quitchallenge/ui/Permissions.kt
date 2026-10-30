@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
@@ -92,37 +93,40 @@ fun rememberPermissionStatus(): PermissionStatus {
     return key(now) { permissionStatus(context) }
 }
 
-/**
- * All protection permissions with live status, plain-language help and the steps for "restricted settings".
- * With [onlyMissing], only the ones still off are shown.
- */
+/** One permission the app needs, with its live status and how to turn it on. */
+class PermissionStep(
+    val number: Int,
+    val title: String,
+    /** Few words for the compact setup banner. */
+    val why: String,
+    val description: String,
+    val granted: Boolean,
+    val restricted: Boolean,
+    val onGrant: () -> Unit,
+)
+
+/** Steps 1-4 in the order the user is asked to turn them on. */
 @Composable
-fun PermissionsList(onlyMissing: Boolean = false, onlyNextMissing: Boolean = false) {
+fun rememberPermissionSteps(): List<PermissionStep> {
     val context = LocalContext.current
     val status = rememberPermissionStatus()
-    val usageOk = status.usage
-    val overlayOk = status.overlay
-    val notifyOk = status.notifications
-    val batteryOk = status.battery
     val notifyLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    // Steps 1-4 in order; with onlyNextMissing, show just the first one still off.
-    val firstMissing = listOf(usageOk, notifyOk, overlayOk, batteryOk).indexOfFirst { !it } + 1
-    fun show(step: Int, ok: Boolean) = if (onlyNextMissing) step == firstMissing else (!onlyMissing || !ok)
-
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (show(1, usageOk)) PermissionCard(
-            step = 1,
+    return listOf(
+        PermissionStep(
+            number = 1,
             title = "📲 Usage access",
+            why = "to track app time limits",
             description = "Measures how long you use each app (the same data Digital Wellbeing uses). Needed for app time-limit challenges.",
-            granted = usageOk,
+            granted = status.usage,
             restricted = Build.VERSION.SDK_INT >= 35,
             onGrant = { openSettings(context, UsageTracker.usageAccessSettingsIntent()) },
-        )
-        if (show(2, notifyOk)) PermissionCard(
-            step = 2,
+        ),
+        PermissionStep(
+            number = 2,
             title = "🔔 Notifications",
-            description = "Break reminders near your limit, milestone celebrations and encouragement after a slip.",
-            granted = notifyOk,
+            why = "for check-ins and break reminders",
+            description = "Check-ins, break reminders near your limit, milestone celebrations and encouragement after a slip.",
+            granted = status.notifications,
             restricted = false,
             onGrant = {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -131,34 +135,44 @@ fun PermissionsList(onlyMissing: Boolean = false, onlyNextMissing: Boolean = fal
                     openSettings(context, appInfoIntent(context))
                 }
             },
-        )
-        if (show(3, overlayOk)) PermissionCard(
-            step = 3,
+        ),
+        PermissionStep(
+            number = 3,
             title = "🪟 Display over other apps",
+            why = "to show full-screen break reminders",
             description = "Shows a full-screen \"Time for a break\" or \"Time limit crossed\" screen over the app you're using, " +
                 "instead of only a notification. Find Quit Challenge in the list and turn it on.",
-            granted = overlayOk,
+            granted = status.overlay,
             restricted = Build.VERSION.SDK_INT >= 35,
             onGrant = {
-                openSettings(
-                    context,
-                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")),
-                )
+                openSettings(context, Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")))
             },
-        )
-        if (show(4, batteryOk)) PermissionCard(
-            step = 4,
+        ),
+        PermissionStep(
+            number = 4,
             title = "🔋 Battery: unrestricted",
+            why = "so reminders arrive on time",
             description = "Some phones (Samsung, Xiaomi, Oppo, Vivo…) stop background protection to save battery. " +
                 "Set Quit Challenge to \"Unrestricted\" / \"No restrictions\" so checks keep running.",
-            granted = batteryOk,
+            granted = status.battery,
             restricted = false,
-            onGrant = {
-                openSettings(context, Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-            },
-        )
-    }
+            onGrant = { openSettings(context, Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) },
+        ),
+    )
+}
 
+/**
+ * All protection permissions with live status, plain-language help and the steps for "restricted settings".
+ * With [onlyMissing], only the ones still off are shown.
+ */
+@Composable
+fun PermissionsList(onlyMissing: Boolean = false) {
+    val steps = rememberPermissionSteps()
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        steps.filter { !onlyMissing || !it.granted }.forEach { step ->
+            PermissionCard(step.number, step.title, step.description, step.granted, step.restricted, step.onGrant)
+        }
+    }
 }
 
 @Composable
@@ -207,13 +221,15 @@ private fun PermissionCard(
 }
 
 /**
- * A hard-to-miss card that stays at the top of the main screens until every permission is on,
- * because without them the daily check-ins, break screens and app time tracking can't work.
+ * A hard-to-miss card that stays at the top of the main screens until every permission is on.
+ * It stays compact (one line + one button for the next step) so the user's challenges remain
+ * visible even on small phones with large text; full details live in the Protection tab.
  */
 @Composable
 fun SetupBanner() {
-    val status = rememberPermissionStatus()
-    if (status.missing == 0) return
+    val steps = rememberPermissionSteps()
+    val missing = steps.filterNot { it.granted }
+    val next = missing.firstOrNull() ?: return
     Card(
         Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -221,28 +237,22 @@ fun SetupBanner() {
             contentColor = MaterialTheme.colorScheme.onErrorContainer,
         ),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                "⚠️ Protection isn't fully on (${status.done} of ${status.total} done)",
-                style = MaterialTheme.typography.titleMedium,
+                "⚠️ Protection isn't fully on (${steps.size - missing.size} of ${steps.size} done)",
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
             )
-            Text(
-                "Check-ins, break reminders and app time tracking need these. Turn on the next one below; " +
-                    "this message goes away when all are on.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
             LinearProgressIndicator(
-                progress = { status.done / status.total.toFloat() },
+                progress = { (steps.size - missing.size) / steps.size.toFloat() },
                 modifier = Modifier.fillMaxWidth(),
             )
-            // One step at a time keeps the user's challenges visible below.
-            PermissionsList(onlyNextMissing = true)
-            if (status.missing > 1) {
-                Text(
-                    "${status.missing - 1} more after this one. You can also turn them all on in the Protection tab.",
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            Text("Next: ${next.title}, ${next.why}.", style = MaterialTheme.typography.bodyMedium)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = next.onGrant) { Text("Turn on") }
+                if (missing.size > 1) {
+                    Text("${missing.size - 1} more after this", style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
     }

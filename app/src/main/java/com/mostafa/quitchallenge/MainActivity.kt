@@ -26,7 +26,10 @@ import com.mostafa.quitchallenge.security.AppLock
 import com.mostafa.quitchallenge.security.LockScreen
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -52,6 +55,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalComposeUiApi::class)
 class MainActivity : FragmentActivity() {
     private var locked by mutableStateOf(false)
 
@@ -68,10 +72,13 @@ class MainActivity : FragmentActivity() {
         if (savedInstanceState == null) requestedRoute = routeFrom(intent)
         setContent {
             QuitTheme {
-                if (locked) {
-                    LockScreen(onUnlocked = { locked = false })
-                } else {
-                    App(requestedRoute = requestedRoute, onRouteConsumed = { requestedRoute = null })
+                // Expose test tags as resource ids so on-device UI tests can find controls reliably.
+                Box(Modifier.semantics { testTagsAsResourceId = true }) {
+                    if (locked) {
+                        LockScreen(onUnlocked = { locked = false })
+                    } else {
+                        App(requestedRoute = requestedRoute, onRouteConsumed = { requestedRoute = null })
+                    }
                 }
             }
         }

@@ -26,6 +26,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,6 +52,7 @@ fun HomeScreen(data: AppData, onOpen: (String) -> Unit, onNew: () -> Unit) {
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onNew,
+                modifier = Modifier.testTag("new_challenge"),
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = { Text("New challenge") },
             )
