@@ -47,6 +47,9 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             testProguardFiles("proguard-test-rules.pro")
+            if (providers.gradleProperty("testBuildType").orNull == "release") {
+                proguardFiles("proguard-release-test.pro")
+            }
             signingConfig = when {
                 releaseStoreFile != null -> signingConfigs.getByName("release")
                 // Only for testing the shrunk build on emulators; never upload such a build.
