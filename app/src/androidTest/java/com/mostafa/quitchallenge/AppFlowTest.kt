@@ -87,22 +87,33 @@ class AppFlowTest {
 
     private fun tap(t: String) = text(t).click()
 
+    /** Hides the on-screen keyboard if it is showing (Back would otherwise close a dialog). */
+    private fun hideKeyboard() {
+        if (shell("dumpsys input_method").contains("mInputShown=true")) {
+            device.pressBack()
+            Thread.sleep(500)
+        }
+    }
+
     /**
-     * Scrolls until [t] is visible. Swipes along the left edge of the scrollable area so the
-     * gesture never starts on a floating button.
+     * Scrolls until [t] is visible: slow swipes along the left edge of the scrollable area
+     * (no fling, never starting on a floating button), first down, then back up.
      */
     private fun scrollTo(t: String): UiObject2 {
+        hideKeyboard()
         device.findObject(By.textContains(t))?.let { return it }
-        repeat(15) {
-            val area = device.findObjects(By.scrollable(true)).maxByOrNull { it.visibleBounds.height() }
-                ?: return text(t)
-            val r = area.visibleBounds
-            val x = r.left + r.width() / 8
-            device.swipe(x, r.top + r.height() * 3 / 4, x, r.top + r.height() / 3, 20)
-            if (device.findObject(By.textContains(t)) != null) {
-                // Let the scroll settle before handing back an object to click.
-                Thread.sleep(700)
-                return text(t, 2_000)
+        for (direction in listOf(1, -1)) {
+            repeat(15) {
+                val area = device.findObjects(By.scrollable(true)).maxByOrNull { it.visibleBounds.height() }
+                    ?: return text(t)
+                val r = area.visibleBounds
+                val x = r.left + r.width() / 8
+                val low = r.top + r.height() * 7 / 10
+                val high = r.top + r.height() * 3 / 10
+                if (direction > 0) device.swipe(x, low, x, high, 60) else device.swipe(x, high, x, low, 60)
+                Thread.sleep(400)
+                hideKeyboard()
+                device.findObject(By.textContains(t))?.let { return it }
             }
         }
         return text(t, 2_000)
