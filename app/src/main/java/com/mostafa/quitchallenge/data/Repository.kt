@@ -1,6 +1,7 @@
 package com.mostafa.quitchallenge.data
 
 import android.content.Context
+import android.util.Log
 import com.mostafa.quitchallenge.widget.ChallengeWidget
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +19,10 @@ class Repository(private val file: File, private val onChange: (AppData) -> Unit
     private fun load(): AppData = try {
         if (file.exists()) json.decodeFromString(AppData.serializer(), file.readText()) else AppData()
     } catch (e: Exception) {
+        // Never let the next save overwrite data we couldn't read (corruption, or a newer app
+        // version's data after a downgrade): keep it next to the data file so it can be recovered.
+        runCatching { file.copyTo(File(file.parentFile, "${file.name}.unreadable-${System.currentTimeMillis()}")) }
+        Log.w("Repository", "Saved data could not be read; kept a copy", e)
         AppData()
     }
 
@@ -25,12 +30,17 @@ class Repository(private val file: File, private val onChange: (AppData) -> Unit
     fun update(transform: (AppData) -> AppData) {
         val next = transform(state.value)
         state.value = next
-        // Write to a temp file first so a crash mid-write can't corrupt the saved data.
-        val tmp = File(file.parentFile, file.name + ".tmp")
-        tmp.writeText(json.encodeToString(AppData.serializer(), next))
-        if (!tmp.renameTo(file)) {
-            file.writeText(tmp.readText())
-            tmp.delete()
+        try {
+            // Write to a temp file first so a crash mid-write can't corrupt the saved data.
+            val tmp = File(file.parentFile, file.name + ".tmp")
+            tmp.writeText(json.encodeToString(AppData.serializer(), next))
+            if (!tmp.renameTo(file)) {
+                file.writeText(tmp.readText())
+                tmp.delete()
+            }
+        } catch (e: Exception) {
+            // Storage full or unavailable: keep working with the data in memory rather than crash.
+            Log.e("Repository", "Could not save data", e)
         }
         onChange(next)
     }

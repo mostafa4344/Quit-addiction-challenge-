@@ -67,6 +67,10 @@ android {
     buildFeatures {
         compose = true
     }
+    // JVM unit tests: android.util.Log calls return quietly instead of throwing.
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
