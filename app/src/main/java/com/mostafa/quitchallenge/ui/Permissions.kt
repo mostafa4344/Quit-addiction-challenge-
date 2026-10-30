@@ -1,12 +1,14 @@
 package com.mostafa.quitchallenge.ui
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +47,24 @@ fun isIgnoringBatteryOptimizations(context: Context): Boolean =
 private fun appInfoIntent(context: Context): Intent =
     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+/**
+ * Opens a system settings page. Some phones (Android Go, some OEM builds) don't have every page,
+ * so fall back to the app's info page, then to a short hint, instead of crashing.
+ */
+fun openSettings(context: Context, intent: Intent) {
+    for (candidate in listOf(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), appInfoIntent(context))) {
+        try {
+            context.startActivity(candidate)
+            return
+        } catch (e: ActivityNotFoundException) {
+            // try the next page
+        } catch (e: SecurityException) {
+            // try the next page
+        }
+    }
+    Toast.makeText(context, "Open Settings > Apps > Quit Challenge to change this.", Toast.LENGTH_LONG).show()
+}
 
 data class PermissionStatus(
     val usage: Boolean,
@@ -93,7 +113,7 @@ fun PermissionsList(onlyMissing: Boolean = false) {
             description = "Measures how long you use each app (the same data Digital Wellbeing uses). Needed for app time-limit challenges.",
             granted = usageOk,
             restricted = Build.VERSION.SDK_INT >= 35,
-            onGrant = { context.startActivity(UsageTracker.usageAccessSettingsIntent()) },
+            onGrant = { openSettings(context, UsageTracker.usageAccessSettingsIntent()) },
         )
         if (!onlyMissing || !notifyOk) PermissionCard(
             step = 2,
@@ -105,7 +125,7 @@ fun PermissionsList(onlyMissing: Boolean = false) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     notifyLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 } else {
-                    context.startActivity(appInfoIntent(context))
+                    openSettings(context, appInfoIntent(context))
                 }
             },
         )
@@ -117,9 +137,9 @@ fun PermissionsList(onlyMissing: Boolean = false) {
             granted = overlayOk,
             restricted = Build.VERSION.SDK_INT >= 35,
             onGrant = {
-                context.startActivity(
-                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                openSettings(
+                    context,
+                    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")),
                 )
             },
         )
@@ -131,7 +151,7 @@ fun PermissionsList(onlyMissing: Boolean = false) {
             granted = batteryOk,
             restricted = false,
             onGrant = {
-                context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                openSettings(context, Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
             },
         )
     }
@@ -176,7 +196,7 @@ private fun PermissionCard(
                             "If you don't see ⋮, first try \"Turn on\" once; the menu appears after Android blocks it the first time.",
                         style = MaterialTheme.typography.bodySmall,
                     )
-                    OutlinedButton(onClick = { context.startActivity(appInfoIntent(context)) }) { Text("Open app info") }
+                    OutlinedButton(onClick = { openSettings(context, appInfoIntent(context)) }) { Text("Open app info") }
                 }
             }
         }

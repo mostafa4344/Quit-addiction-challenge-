@@ -423,7 +423,7 @@ private fun AppUsageCard(c: Challenge) {
             Text("📲 Today's app time", fontWeight = FontWeight.Bold)
             if (!UsageTracker.hasUsageAccess(context)) {
                 Text("Allow \"Usage access\" so the app can measure your screen time, like Digital Wellbeing does.")
-                Button(onClick = { context.startActivity(UsageTracker.usageAccessSettingsIntent()) }) {
+                Button(onClick = { openSettings(context, UsageTracker.usageAccessSettingsIntent()) }) {
                     Text("Grant usage access")
                 }
                 return@Column
