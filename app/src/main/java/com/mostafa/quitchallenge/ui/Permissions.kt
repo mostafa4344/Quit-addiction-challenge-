@@ -97,7 +97,7 @@ fun rememberPermissionStatus(): PermissionStatus {
  * With [onlyMissing], only the ones still off are shown.
  */
 @Composable
-fun PermissionsList(onlyMissing: Boolean = false) {
+fun PermissionsList(onlyMissing: Boolean = false, onlyNextMissing: Boolean = false) {
     val context = LocalContext.current
     val status = rememberPermissionStatus()
     val usageOk = status.usage
@@ -105,9 +105,12 @@ fun PermissionsList(onlyMissing: Boolean = false) {
     val notifyOk = status.notifications
     val batteryOk = status.battery
     val notifyLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    // Steps 1-4 in order; with onlyNextMissing, show just the first one still off.
+    val firstMissing = listOf(usageOk, notifyOk, overlayOk, batteryOk).indexOfFirst { !it } + 1
+    fun show(step: Int, ok: Boolean) = if (onlyNextMissing) step == firstMissing else (!onlyMissing || !ok)
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (!onlyMissing || !usageOk) PermissionCard(
+        if (show(1, usageOk)) PermissionCard(
             step = 1,
             title = "📲 Usage access",
             description = "Measures how long you use each app (the same data Digital Wellbeing uses). Needed for app time-limit challenges.",
@@ -115,7 +118,7 @@ fun PermissionsList(onlyMissing: Boolean = false) {
             restricted = Build.VERSION.SDK_INT >= 35,
             onGrant = { openSettings(context, UsageTracker.usageAccessSettingsIntent()) },
         )
-        if (!onlyMissing || !notifyOk) PermissionCard(
+        if (show(2, notifyOk)) PermissionCard(
             step = 2,
             title = "🔔 Notifications",
             description = "Break reminders near your limit, milestone celebrations and encouragement after a slip.",
@@ -129,7 +132,7 @@ fun PermissionsList(onlyMissing: Boolean = false) {
                 }
             },
         )
-        if (!onlyMissing || !overlayOk) PermissionCard(
+        if (show(3, overlayOk)) PermissionCard(
             step = 3,
             title = "🪟 Display over other apps",
             description = "Shows a full-screen \"Time for a break\" or \"Time limit crossed\" screen over the app you're using, " +
@@ -143,7 +146,7 @@ fun PermissionsList(onlyMissing: Boolean = false) {
                 )
             },
         )
-        if (!onlyMissing || !batteryOk) PermissionCard(
+        if (show(4, batteryOk)) PermissionCard(
             step = 4,
             title = "🔋 Battery: unrestricted",
             description = "Some phones (Samsung, Xiaomi, Oppo, Vivo…) stop background protection to save battery. " +
@@ -225,15 +228,22 @@ fun SetupBanner() {
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                "These permissions are what make your challenge work: daily check-ins, break reminders and app time tracking. " +
-                    "Without them the app can't protect you. Tap \"Turn on\" for each one below; this message goes away when all are on.",
+                "Check-ins, break reminders and app time tracking need these. Turn on the next one below; " +
+                    "this message goes away when all are on.",
                 style = MaterialTheme.typography.bodyMedium,
             )
             LinearProgressIndicator(
                 progress = { status.done / status.total.toFloat() },
                 modifier = Modifier.fillMaxWidth(),
             )
-            PermissionsList(onlyMissing = true)
+            // One step at a time keeps the user's challenges visible below.
+            PermissionsList(onlyNextMissing = true)
+            if (status.missing > 1) {
+                Text(
+                    "${status.missing - 1} more after this one. You can also turn them all on in the Protection tab.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }

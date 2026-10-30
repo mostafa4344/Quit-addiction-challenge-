@@ -126,7 +126,7 @@ class AppFlowTest {
         text("Keep it private")
         shot("03-onboarding-lock")
         tap("Start using the app")
-        text("No challenges yet")
+        scrollTo("No challenges yet")
         text("Protection isn't fully on")
         shot("04-home-empty")
     }
@@ -177,7 +177,7 @@ class AppFlowTest {
         find(By.desc("Delete"), "Delete icon").click()
         text("Delete this challenge?")
         find(By.text("Delete"), "Delete button").click()
-        text("No challenges yet")
+        scrollTo("No challenges yet")
     }
 
     @Test
@@ -232,7 +232,7 @@ class AppFlowTest {
             text("Quit Challenge is locked")
             shot("40-lock-screen")
             listOf("1", "2", "3", "4").forEach { find(By.text(it), "key $it").click() }
-            text("No challenges yet")
+            scrollTo("No challenges yet")
         } finally {
             AppLock.disable(context)
         }
