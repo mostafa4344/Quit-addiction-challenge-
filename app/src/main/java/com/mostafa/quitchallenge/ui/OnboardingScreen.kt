@@ -1,5 +1,6 @@
 package com.mostafa.quitchallenge.ui
 
+import androidx.compose.foundation.layout.safeDrawingPadding
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
         Column(
             Modifier
                 .fillMaxSize()
+                .safeDrawingPadding()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {

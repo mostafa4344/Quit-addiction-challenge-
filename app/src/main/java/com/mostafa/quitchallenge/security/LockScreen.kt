@@ -1,5 +1,6 @@
 package com.mostafa.quitchallenge.security
 
+import com.mostafa.quitchallenge.ui.CenteredScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -99,13 +100,7 @@ fun LockScreen(onUnlocked: () -> Unit) {
     }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-        ) {
+        CenteredScroll {
             Text("🔒", style = MaterialTheme.typography.displayMedium)
             Text("Quit Challenge is locked", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(message, textAlign = TextAlign.Center)

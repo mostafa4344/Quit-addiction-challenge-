@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -65,6 +67,8 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Same look on every Android version (Android 15+ enforces edge-to-edge anyway).
+        enableEdgeToEdge()
         Notifier.createChannel(this)
         LimitWorker.schedule(this)
         CheckInAlarm.schedule(this)
@@ -194,7 +198,11 @@ fun App(requestedRoute: String? = null, onRouteConsumed: () -> Unit = {}, vm: Ap
             }
         },
     ) { padding ->
-        Box(Modifier.padding(padding)) {
+        Box(
+            Modifier
+                .padding(padding)
+                .consumeWindowInsets(padding),
+        ) {
             when {
                 route == HOME -> HomeScreen(
                     data = data,

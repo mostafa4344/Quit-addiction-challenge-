@@ -2,6 +2,11 @@
 
 package com.mostafa.quitchallenge.ui
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.ColumnScope
 import android.content.Context
 import android.view.WindowManager
 import androidx.compose.runtime.SideEffect
@@ -128,6 +133,30 @@ fun StatBox(label: String, value: String, modifier: Modifier = Modifier) {
             Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             Text(label, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
         }
+    }
+}
+
+/**
+ * Full-screen content that stays centered, scrolls when it doesn't fit (small phones, big fonts,
+ * landscape) and keeps clear of the status bar, navigation bar and camera cutout.
+ */
+@Composable
+fun CenteredScroll(content: @Composable ColumnScope.() -> Unit) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .safeDrawingPadding(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            content = content,
+        )
     }
 }
 

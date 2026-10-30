@@ -1,5 +1,7 @@
 package com.mostafa.quitchallenge.guard
 
+import com.mostafa.quitchallenge.ui.CenteredScroll
+import androidx.activity.enableEdgeToEdge
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -33,6 +35,7 @@ import com.mostafa.quitchallenge.ui.theme.QuitTheme
 class WarningActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         val emoji = intent.getStringExtra(EXTRA_EMOJI) ?: "🛑"
         val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         val message = intent.getStringExtra(EXTRA_MESSAGE).orEmpty()
@@ -41,13 +44,7 @@ class WarningActivity : ComponentActivity() {
         setContent {
             QuitTheme {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
+                    CenteredScroll {
                         Text(emoji, style = MaterialTheme.typography.displayLarge)
                         Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                         Text(message, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)

@@ -33,6 +33,10 @@ jobs:
             api: 35
             profile: pixel_7
             font: "1.0"
+          - name: android-16-api36
+            api: 36
+            profile: pixel_6
+            font: "1.0"
     name: ${{ matrix.name }}
     steps:
       - uses: actions/checkout@v4

@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.mostafa.quitchallenge"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.mostafa.quitchallenge"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 10
         versionName = "0.7.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
