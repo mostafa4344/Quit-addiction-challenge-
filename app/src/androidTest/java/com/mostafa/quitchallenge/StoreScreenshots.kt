@@ -178,8 +178,6 @@ class StoreScreenshots {
         tap("No social media scrolling")
         waitText("Goal: 30 days")
         shot("02-progress")
-        scrollDown(2)
-        shot("03-stats")
 
         tap("I feel an urge")
         waitText("Ride out the urge")
@@ -189,6 +187,9 @@ class StoreScreenshots {
         Thread.sleep(4_000)
         shot("05-sos-surf")
         device.pressBack()
+        waitText("Goal: 30 days")
+        scrollDown(2)
+        shot("03-stats")
         device.pressBack()
 
         launch()

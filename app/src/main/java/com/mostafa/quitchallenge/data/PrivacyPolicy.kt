@@ -2,7 +2,7 @@ package com.mostafa.quitchallenge.data
 
 // Generated together with docs/privacy-policy.html so both always say the same thing.
 
-const val PRIVACY_EFFECTIVE_DATE = "14 October 2026"
+const val PRIVACY_EFFECTIVE_DATE = "30 October 2026"
 
 const val PRIVACY_POLICY_URL = "https://mostafa4344.github.io/Quit-addiction-challenge-/privacy-policy.html"
 
@@ -52,6 +52,6 @@ val PRIVACY_SECTIONS: List<Pair<String, List<String>>> = listOf(
         "If this policy changes, the new version will be published on this page and in the app with a new effective date.",
     ),
     "Contact" to listOf(
-        "Questions about this policy or the app: CONTACT_EMAIL_PLACEHOLDER",
+        "Questions about this policy or the app: open an issue at https://github.com/mostafa4344/Quit-addiction-challenge-/issues (please don't post private details there)",
     ),
 )

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quit Challenge</title>
+  <meta name="description" content="Quit Challenge helps you quit habits and addictions: timed challenges, daily check-ins, app time limits and SOS urge help. Private: no account, no ads, no internet.">
+  <link rel="icon" type="image/png" href="assets/icon.png">
+  <style>
+    :root {
+      --bg: #f5faf8; --surface: #ffffff; --text: #17201e; --muted: #4f5e5a;
+      --brand: #00897b; --brand-dark: #00695c; --accent: #ffb74d; --line: #d7e6e2;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0f1716; --surface: #18221f; --text: #e6efec; --muted: #a8b8b4; --brand: #4db6ac; --brand-dark: #80cbc4; --line: #2a3835; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+    header { background: linear-gradient(160deg, #009688, #004d40); color: #fff; padding: 48px 0 56px; }
+    .hero { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+    .hero img { width: 112px; height: 112px; border-radius: 26px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+    h1 { font-size: 2.4rem; margin: 0 0 6px; line-height: 1.15; }
+    .tag { font-size: 1.2rem; margin: 0 0 20px; opacity: .95; }
+    .buttons { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn { display: inline-block; padding: 14px 22px; border-radius: 999px; font-weight: 700; text-decoration: none; }
+    .btn.primary { background: var(--accent); color: #2b1a00; }
+    .btn.ghost { border: 2px solid rgba(255,255,255,.7); color: #fff; }
+    .small { font-size: .9rem; opacity: .85; margin-top: 12px; }
+    section { padding: 40px 0; }
+    h2 { font-size: 1.5rem; margin: 0 0 16px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+    .card h3 { margin: 0 0 6px; font-size: 1.05rem; }
+    .card p { margin: 0; color: var(--muted); }
+    .shots { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; }
+    .shots img { height: 420px; border-radius: 16px; scroll-snap-align: start; flex: none; }
+    ol li { margin-bottom: 8px; }
+    .privacy { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+    a { color: var(--brand-dark); }
+    footer { padding: 28px 0 40px; color: var(--muted); font-size: .9rem; border-top: 1px solid var(--line); }
+    @media (max-width: 520px) { h1 { font-size: 1.9rem; } .shots img { height: 340px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap hero">
+      <img src="assets/icon.png" alt="Quit Challenge icon">
+      <div>
+        <h1>Quit Challenge</h1>
+        <p class="tag">Beat any habit, one day at a time.</p>
+        <div class="buttons">
+          <a class="btn primary" href="https://github.com/mostafa4344/Quit-addiction-challenge-/releases/latest/download/QuitChallenge.apk">⬇ Download for Android</a>
+          <a class="btn ghost" href="#install">How to install</a>
+        </div>
+        <p class="small">Free · Android 8.0 or newer · Coming soon to Google Play</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section>
+      <h2>What it does</h2>
+      <div class="grid">
+        <div class="card"><h3>⏱ Timed challenges</h3><p>Set a goal in days or hours for social media, games, smoking, porn, junk food or anything else, and watch your streak grow.</p></div>
+        <div class="card"><h3>🆘 SOS for urges</h3><p>When an urge hits, rate it and ride it out with a short guided wave. Urges pass; the app shows you.</p></div>
+        <div class="card"><h3>📊 Pressure insights</h3><p>See which pressures pull you back (stress, boredom, late nights) and when, then write your own if-then plans.</p></div>
+        <div class="card"><h3>📲 App time limits</h3><p>Daily limits for chosen apps with break reminders and a full-screen "time for a break" screen.</p></div>
+        <div class="card"><h3>📅 Daily check-ins</h3><p>Answer "still on track?" right from a notification, at the times you choose.</p></div>
+        <div class="card"><h3>🌱 Slips are not the end</h3><p>A slip only restarts the streak. Your total clean time, best streak and badges stay.</p></div>
+        <div class="card"><h3>🔒 App lock</h3><p>Optional PIN or fingerprint lock, so nobody else can see your progress.</p></div>
+        <div class="card"><h3>🏠 Home screen widget</h3><p>Your streak at a glance, every time you unlock your phone.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Screenshots</h2>
+      <div class="shots">
+        <img src="assets/screens/01-home.png" alt="Challenges list" loading="lazy">
+        <img src="assets/screens/02-progress.png" alt="Challenge progress" loading="lazy">
+        <img src="assets/screens/04-sos-start.png" alt="SOS urge help" loading="lazy">
+        <img src="assets/screens/06-insights.png" alt="Pressure insights" loading="lazy">
+        <img src="assets/screens/09-break-screen.png" alt="Break reminder screen" loading="lazy">
+        <img src="assets/screens/10-new-challenge.png" alt="New challenge" loading="lazy">
+      </div>
+    </section>
+
+    <section id="install">
+      <h2>How to install</h2>
+      <ol>
+        <li>Open this page on your Android phone and tap <b>Download for Android</b>.</li>
+        <li>Open the downloaded <b>QuitChallenge.apk</b>. If Android asks, allow your browser to <b>install unknown apps</b> (only this once).</li>
+        <li>Tap <b>Install</b>, then open Quit Challenge. The app walks you through the few permissions it needs and why.</li>
+      </ol>
+      <p>Updates: download the newest version from this page and install it over the old one. Your data stays. Want to check the file? Its SHA-256 is on the <a href="https://github.com/mostafa4344/Quit-addiction-challenge-/releases/latest">release page</a>.</p>
+    </section>
+
+    <section>
+      <div class="privacy">
+        <h2>Private by design</h2>
+        <p>No account, no ads, no analytics. The app has no internet permission, so your challenges, slips and notes never leave your phone. Read the <a href="privacy-policy.html">privacy policy</a>.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      Quit Challenge · <a href="privacy-policy.html">Privacy policy</a> · <a href="https://github.com/mostafa4344/Quit-addiction-challenge-/issues">Help and feedback</a><br>
+      Quit Challenge is a self-help tool, not medical treatment. If you are struggling, please talk to a doctor or a local support service.
+    </div>
+  </footer>
+</body>
+</html>

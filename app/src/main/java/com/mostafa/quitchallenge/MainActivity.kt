@@ -165,7 +165,14 @@ fun App(requestedRoute: String? = null, onRouteConsumed: () -> Unit = {}, vm: Ap
         }
     }
 
-    BackHandler(enabled = route != HOME) { route = if (route == PRIVACY) PROTECT else HOME }
+    BackHandler(enabled = route != HOME) {
+        route = when {
+            route == PRIVACY -> PROTECT
+            // Back from SOS returns to the challenge it was opened from.
+            route.startsWith(SOS) && route.length > SOS.length -> DETAIL + route.removePrefix(SOS)
+            else -> HOME
+        }
+    }
 
     Scaffold(
         bottomBar = {

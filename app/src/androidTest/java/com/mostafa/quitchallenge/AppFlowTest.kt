@@ -76,8 +76,26 @@ class AppFlowTest {
     private fun launch() {
         val intent = context.packageManager.getLaunchIntentForPackage(pkg)!!
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        context.startActivity(intent)
-        assertTrue("app did not open", device.wait(Until.hasObject(By.pkg(pkg).depth(0)), 15_000))
+        for (attempt in 1..2) {
+            closeEmulatorAnrDialogs()
+            context.startActivity(intent)
+            if (device.wait(Until.hasObject(By.pkg(pkg).depth(0)), 15_000)) return
+        }
+        shot("MISSING-app-window")
+        fail("app did not open")
+    }
+
+    /**
+     * Slow CI emulators sometimes show "Pixel Launcher isn't responding" over everything, which hides
+     * our app from UiAutomator. That's the emulator, not the app: close it by stopping the frozen app.
+     */
+    private fun closeEmulatorAnrDialogs() {
+        val windows = shell("dumpsys window windows")
+        Regex("Application Not Responding: ([\\w.]+)").findAll(windows)
+            .map { it.groupValues[1] }
+            .filter { it != pkg }
+            .toSet()
+            .forEach { shell("am force-stop $it") }
     }
 
     /**
@@ -213,6 +231,12 @@ class AppFlowTest {
         tap("The urge has passed")
         text("You rode it out")
         scrollTo("Save").click()
+        text("Goal: 7 days")
+
+        // Back from SOS returns to the challenge, not the list.
+        scrollTo("I feel an urge").click()
+        text("Ride out the urge")
+        device.pressBack()
         text("Goal: 7 days")
 
         // History keeps the slip.
