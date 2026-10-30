@@ -300,11 +300,13 @@ class AppFlowTest {
         CheckInAlarm.schedule(context)
 
         CheckIn.check(context)
+        // Posting is asynchronous; older Android shows it a moment later.
         val nm = context.getSystemService(NotificationManager::class.java)
-        val posted = nm.activeNotifications.any {
-            it.notification.extras.getString(Notification.EXTRA_TITLE)?.contains("Daily check-in") == true
+        waitFor("check-in notification posted") {
+            nm.activeNotifications.any {
+                it.notification.extras.getString(Notification.EXTRA_TITLE)?.contains("Daily check-in") == true
+            }
         }
-        assertTrue("check-in notification was not posted", posted)
         device.openNotification()
         device.wait(Until.hasObject(By.textContains("Daily check-in")), 5_000)
         shot("50-check-in-notification")
