@@ -27,6 +27,9 @@ import com.mostafa.quitchallenge.data.checkedInToday
 import com.mostafa.quitchallenge.data.dayNumber
 import com.mostafa.quitchallenge.data.formatGoal
 import com.mostafa.quitchallenge.data.formatMinutes
+import com.mostafa.quitchallenge.data.formatMoney
+import com.mostafa.quitchallenge.data.localCurrencySymbol
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -262,5 +265,22 @@ class LogicTest {
         assertEquals(2, insights.dayPartCounts.first { it.first == DayPart.MORNING }.second)
         assertEquals(50, insights.successRate)
         assertEquals(1, insights.urgesHandled)
+    }
+
+    @Test
+    fun currencyFollowsThePhoneRegion() {
+        assertEquals("$", localCurrencySymbol(Locale.US))
+        assertEquals("€", localCurrencySymbol(Locale.GERMANY))
+        assertEquals("৳", localCurrencySymbol(Locale("bn", "BD")))
+        assertEquals("৳", localCurrencySymbol(Locale("en", "BD")))
+        // No region set: fall back instead of crashing.
+        assertEquals("$", localCurrencySymbol(Locale("en")))
+    }
+
+    @Test
+    fun moneyFormatting() {
+        assertEquals("$120", formatMoney(120.4, "$"))
+        assertEquals("৳12.50", formatMoney(12.5, "৳"))
+        assertEquals("BDT 120", formatMoney(120.0, "BDT"))
     }
 }

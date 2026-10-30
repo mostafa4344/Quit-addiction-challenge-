@@ -21,8 +21,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Run unit tests and build APK
-        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
+      # assembleRelease also runs R8 and Android lint's release checks (unsigned here; signed builds
+      # come from release.yml).
+      - name: Run unit tests and build APKs
+        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleRelease
 
       - name: Rename APK
         run: cp app/build/outputs/apk/debug/app-debug.apk QuitChallenge.apk
@@ -32,15 +34,17 @@ jobs:
           name: QuitChallenge-apk
           path: QuitChallenge.apk
 
-      # Publishes the newest APK on the Releases page so it can be downloaded straight to a phone.
-      - name: Publish latest APK
-        if: github.event_name == 'push'
+      # Test build of every push, as a pre-release named "dev-build" (for testers, not the public).
+      # Public, signed releases are made by release.yml.
+      - name: Publish test APK
+        if: github.event_name == 'push' && github.ref_type == 'branch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest QuitChallenge.apk \
+          gh release delete dev-build --yes --cleanup-tag || true
+          gh release create dev-build QuitChallenge.apk \
             --target "$GITHUB_SHA" \
             --prerelease \
-            --title "সর্বশেষ APK (${GITHUB_REF_NAME})" \
-            --notes "স্বয়ংক্রিয়ভাবে বানানো টেস্ট APK। কমিট: $GITHUB_SHA"
+            --title "Test build (${GITHUB_REF_NAME})" \
+            --notes "Automatic debug build for testing, not for the public. Commit: $GITHUB_SHA"

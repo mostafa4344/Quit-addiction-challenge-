@@ -1,5 +1,6 @@
 package com.mostafa.quitchallenge
 
+import com.mostafa.quitchallenge.data.localCurrencySymbol
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import com.mostafa.quitchallenge.data.AppData
@@ -45,6 +46,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             dailyLimitMinutes = dailyLimitMinutes,
             minutesPerDay = minutesPerDay,
             moneyPerDay = moneyPerDay,
+            currency = localCurrencySymbol(),
         )
         repo.update { it.copy(challenges = it.challenges + challenge) }
         return challenge.id

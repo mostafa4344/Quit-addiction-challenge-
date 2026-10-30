@@ -5,7 +5,10 @@ set -u
 mkdir -p device-results
 adb shell settings put system font_scale "${FONT_SCALE:-1.0}"
 adb logcat -c
-./gradlew --no-daemon connectedDebugAndroidTest
+VARIANT="${VARIANT:-Debug}"
+extra=""
+if [ "$VARIANT" = Release ]; then extra="-PtestBuildType=release -PdebugSignRelease"; fi
+./gradlew --no-daemon $extra connected${VARIANT}AndroidTest
 status=$?
 adb pull /data/local/tmp/qc-shots device-results/screenshots || true
 adb logcat -d > device-results/logcat.txt || true

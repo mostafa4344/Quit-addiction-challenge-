@@ -1,9 +1,20 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
+
+// Release signing key. Kept out of git: either keystore.properties in the project folder
+// (made by scripts/create-release-key.ps1) or QC_* environment variables (GitHub Actions secrets).
+val keystoreProps = Properties().apply {
+    rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+fun signingValue(key: String, env: String): String? =
+    keystoreProps.getProperty(key)?.takeIf { it.isNotBlank() } ?: System.getenv(env)?.takeIf { it.isNotBlank() }
+val releaseStoreFile = signingValue("storeFile", "QC_KEYSTORE_FILE")
 
 android {
     namespace = "com.mostafa.quitchallenge"
@@ -18,11 +29,33 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = rootProject.file(releaseStoreFile)
+                storePassword = signingValue("storePassword", "QC_KEYSTORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "QC_KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "QC_KEY_PASSWORD")
+            }
         }
     }
+
+    buildTypes {
+        release {
+            // Smaller, faster app: R8 removes unused library code. Rules in proguard-rules.pro.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = when {
+                releaseStoreFile != null -> signingConfigs.getByName("release")
+                // Only for testing the shrunk build on emulators; never upload such a build.
+                providers.gradleProperty("debugSignRelease").isPresent -> signingConfigs.getByName("debug")
+                else -> null
+            }
+        }
+    }
+    // Device tests normally run on the debug build; CI also runs them on the release build.
+    testBuildType = providers.gradleProperty("testBuildType").getOrElse("debug")
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

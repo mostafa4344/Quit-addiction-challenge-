@@ -33,10 +33,12 @@ jobs:
             api: 35
             profile: pixel_7
             font: "1.0"
-          - name: android-16-api36
+          # Android 16 runs the shrunk (R8) release build, the one that ships.
+          - name: android-16-api36-release
             api: 36
             profile: pixel_6
             font: "1.0"
+            variant: Release
     name: ${{ matrix.name }}
     steps:
       - uses: actions/checkout@v4
@@ -55,12 +57,17 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Build app and tests
-        run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+        env:
+          VARIANT: ${{ matrix.variant || 'Debug' }}
+        run: |
+          if [ "$VARIANT" = Release ]; then extra="-PtestBuildType=release -PdebugSignRelease"; else extra=""; fi
+          ./gradlew --no-daemon $extra assemble$VARIANT assemble${VARIANT}AndroidTest
 
       - name: Run on emulator
         uses: reactivecircus/android-emulator-runner@v2
         env:
           FONT_SCALE: ${{ matrix.font }}
+          VARIANT: ${{ matrix.variant || 'Debug' }}
         with:
           api-level: ${{ matrix.api }}
           target: google_apis

@@ -2,6 +2,7 @@
 
 package com.mostafa.quitchallenge.ui
 
+import com.mostafa.quitchallenge.data.localCurrencySymbol
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.clickable
@@ -267,7 +268,7 @@ fun NewChallengeScreen(
                 OutlinedTextField(
                     value = costMoney,
                     onValueChange = { v -> costMoney = v.filter { it.isDigit() || it == '.' }.take(8) },
-                    label = { Text("Money / day (৳)") },
+                    label = { Text("Money / day (${localCurrencySymbol()})") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.weight(1f),

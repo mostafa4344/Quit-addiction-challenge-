@@ -231,8 +231,25 @@ private val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a", 
 fun formatDate(ms: Long, zone: ZoneId = ZoneId.systemDefault()): String =
     Instant.ofEpochMilli(ms).atZone(zone).format(dateFormatter)
 
-fun formatMoney(amount: Double, currency: String): String =
-    if (amount >= 100) "$currency${amount.toLong()}" else "$currency${"%.2f".format(Locale.ENGLISH, amount)}"
+fun formatMoney(amount: Double, currency: String): String {
+    val number = if (amount >= 100) "${amount.toLong()}" else "%.2f".format(Locale.ENGLISH, amount)
+    // Letter codes like "BDT" or "CHF" read better with a space: "BDT 120", but "$120".
+    val sep = if (currency.lastOrNull()?.isLetter() == true) " " else ""
+    return "$currency$sep$number"
+}
+
+/** The currency symbol for the phone's region ("৳" in Bangladesh, "$" in the US), "$" if unknown. */
+fun localCurrencySymbol(locale: Locale = Locale.getDefault()): String = try {
+    val currency = java.util.Currency.getInstance(locale)
+    // Prefer the region's own symbol; English locales often only know the code ("BDT"), so also
+    // ask the country's other languages (bn-BD gives "৳", hi-IN gives "₹").
+    val sameCountry = Locale.getAvailableLocales().asSequence().filter { it.country == locale.country }
+    (sequenceOf(locale) + sameCountry).map { currency.getSymbol(it) }
+        .firstOrNull { it.isNotBlank() && it != currency.currencyCode }
+        ?: currency.currencyCode
+} catch (e: Exception) {
+    "$"
+}
 
 /** Urges and slips counted by weekday (Monday first) × part of day. */
 fun riskHeatmap(data: AppData, zone: ZoneId = ZoneId.systemDefault()): List<List<Int>> {
